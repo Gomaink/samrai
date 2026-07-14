@@ -13,7 +13,7 @@ body:
     attributes:
       label: samrai version
       description: Use the value shown in Settings or `samrai version`.
-      placeholder: 0.2.0-rc.5
+      placeholder: 0.2.0-rc.6
     validations:
       required: true
   - type: dropdown

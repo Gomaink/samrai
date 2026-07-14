@@ -1,52 +1,27 @@
-# samrai v0.2.0-rc.5
+# samrai v0.2.0-rc.6
 
-Release candidate 5 prepares the repository for public development and makes English the project language.
+Release candidate 6 fixes two test fixtures introduced while translating the repository to English.
 
-## English interface and server output
+## What was wrong
 
-The browser interface, API error messages, command output, logs, scripts, test fixtures, and default instance labels are now in English. Existing titles, series names, notes, usernames, and other user-created data are left as they are.
+The application code was behaving correctly, but two PDF catalog tests no longer represented their original cases:
 
-A migration changes the managed library name from `Biblioteca principal` to `Main library` only when the old value is still the untouched default. Custom library names are not changed.
+- the metadata limit test expected the word `title` after truncating a longer English phrase to six runes;
+- the excerpt test searched for `montreal` and then required the original accented text `Montréal` to contain the unaccented spelling.
 
-## Repository work
+## Fix
 
-This release adds the files normally expected in a public repository:
+The metadata test now uses `résumé` to verify trimming and Unicode rune boundaries. The excerpt test now uses an unaccented matched term, while accent-insensitive search remains covered by its dedicated test.
 
-- an MIT license;
-- contribution and conduct guidelines;
-- issue forms and a pull request template;
-- Dependabot configuration;
-- EditorConfig and Git attributes;
-- a configuration reference;
-- installation, development, release, and operational documentation in English.
+No database migration or runtime behavior changes are included in this release.
 
-The README now covers native Windows, native Unix, Docker, upgrades, backups, frontend development, and release checks from a clean checkout.
+## Upgrade from rc.5
 
-## Compatibility
+1. Stop rc.5.
+2. Extract rc.6 to a new directory.
+3. Copy the complete rc.5 `data` directory.
+4. Copy the rc.5 `.env` file.
+5. Run `test-windows.bat`.
+6. Start rc.6.
 
-The rename compatibility introduced in earlier candidates remains in place. Existing installations may continue to use:
-
-- `PAGETURNER_*` environment variables;
-- `pageturner.db` and `pageturner.log`;
-- the legacy session cookie;
-- the Docker volume `pageturner-data`.
-
-New configuration should use the `SAMRAI_*` names.
-
-## Upgrade from rc.4
-
-1. Stop rc.4.
-2. Extract rc.5 to a new directory.
-3. Copy the complete rc.4 `data` directory.
-4. Copy the rc.4 `.env` file.
-5. Run the test script.
-6. Start rc.5 and check login, one comic, one PDF or EPUB, and the import screen.
-
-No imported file or user content needs to be renamed.
-
-## Still known
-
-- This is a release candidate, not the final `0.2.0` release.
-- Restores still require the server to be stopped.
-- Native CBR and CB7 imports require 7-Zip or `lsar` + `unar`.
-- DRM-protected EPUB files are not supported.
+All library data and settings remain compatible.

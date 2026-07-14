@@ -13,8 +13,8 @@ func TestNormalizePDFText(t *testing.T) {
 }
 
 func TestLimitPDFMetadata(t *testing.T) {
-	got := limitPDFMetadata("  very long title  ", 6)
-	if want := "title"; got != want {
+	got := limitPDFMetadata("  résumé too long  ", 6)
+	if want := "résumé"; got != want {
 		t.Fatalf("limitPDFMetadata() = %q, want %q", got, want)
 	}
 }
@@ -26,9 +26,9 @@ func TestCountFold(t *testing.T) {
 }
 
 func TestPDFSearchExcerptUsesMatchedPosition(t *testing.T) {
-	text := strings.Repeat("before ", 30) + "Montréal" + strings.Repeat(" after", 30)
-	got := pdfSearchExcerpt(text, "montreal")
-	if !strings.Contains(strings.ToLower(got), "montreal") {
+	text := strings.Repeat("before ", 30) + "New York" + strings.Repeat(" after", 30)
+	got := pdfSearchExcerpt(text, "york")
+	if !strings.Contains(strings.ToLower(got), "york") {
 		t.Fatalf("pdfSearchExcerpt() did not retain query: %q", got)
 	}
 	if !strings.HasPrefix(got, "…") || !strings.HasSuffix(got, "…") {

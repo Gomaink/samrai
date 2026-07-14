@@ -2,6 +2,13 @@
 
 This file records user-visible changes. Dates use UTC.
 
+## [0.2.0-rc.6] - 2026-07-14
+
+### Fixed
+
+- Repaired two PDF catalog tests whose English fixtures no longer matched the behavior they were intended to verify.
+- Kept the metadata limit test focused on Unicode rune boundaries and the excerpt test focused on matched-position trimming.
+
 ## [0.2.0-rc.5] - 2026-07-14
 
 ### Changed

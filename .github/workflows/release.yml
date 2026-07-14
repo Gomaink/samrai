@@ -64,7 +64,8 @@ jobs:
           sha256sum "samrai-v${version}-source.zip" "samrai-v${version}-source.tar.gz" > SHA256SUMS.txt
       - uses: softprops/action-gh-release@v2
         with:
-          generate_release_notes: true
+          name: samrai v${{ steps.meta.outputs.version }}
+          body_path: RELEASE_NOTES.md
           prerelease: ${{ steps.meta.outputs.prerelease == 'true' }}
           files: |
             samrai-v${{ steps.meta.outputs.version }}-source.zip

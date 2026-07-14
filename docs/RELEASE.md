@@ -1,5 +1,29 @@
 # Release process
 
+## First publication on GitHub
+
+Create an empty repository named `samrai`. Do not add a README, license, or `.gitignore` from the GitHub form because those files already exist in this project.
+
+From the extracted release directory:
+
+```powershell
+git init
+git add .
+git commit -m "release: samrai v0.2.0-rc.6"
+git branch -M main
+git remote add origin https://github.com/<github-user>/samrai.git
+git push -u origin main
+```
+
+Wait for the `CI` workflow to pass before creating the release tag:
+
+```powershell
+git tag -a v0.2.0-rc.6 -m "samrai v0.2.0-rc.6"
+git push origin v0.2.0-rc.6
+```
+
+The tag starts the `Release` workflow. It builds and publishes the container image, creates the source archives and checksum manifest, and opens a GitHub prerelease using `RELEASE_NOTES.md`.
+
 ## Before tagging
 
 1. Update the version in the Makefile, Dockerfile, Compose file, Go version package, frontend package files, README, changelog, and release notes.
@@ -33,7 +57,7 @@ The Makefile injects version, commit, and UTC build time through Go linker flags
 Release tags use the form:
 
 ```text
-v0.2.0-rc.5
+v0.2.0-rc.6
 v0.2.0
 ```
 

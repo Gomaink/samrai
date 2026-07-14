@@ -1,10 +1,10 @@
 services:
   samrai:
-    image: samrai:0.2.0-rc.5
+    image: samrai:0.2.0-rc.6
     build:
       context: .
       args:
-        VERSION: 0.2.0-rc.5
+        VERSION: 0.2.0-rc.6
         COMMIT: source
         BUILD_DATE: local
     container_name: samrai

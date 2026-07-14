@@ -2,7 +2,13 @@
 
 samrai is a self-hosted library and reader for manga, comics, PDFs, and EPUB books. It runs as a single Go server with the web application embedded in the binary and stores its state in SQLite.
 
-> **Release status:** `v0.2.0-rc.5` is a release candidate. Back up the `data` directory before upgrading and report anything that blocks normal reading or library management.
+> **Release status:** `v0.2.0-rc.6` is a release candidate. Back up the `data` directory before upgrading and report anything that blocks normal reading or library management.
+
+<p align="center">
+  <a href="https://imgur.com/FkzDTBn">
+    <img src="https://i.imgur.com/FkzDTBn.png" alt="samrai library interface" width="1100">
+  </a>
+</p>
 
 ## What it does
 
@@ -91,17 +97,17 @@ Stop the old server and copy its entire `data` directory into the new release. D
 Windows example:
 
 ```powershell
-New-Item -ItemType Directory -Force "C:\samrai\samrai-v0.2.0-rc.5\data"
+New-Item -ItemType Directory -Force "C:\samrai\samrai-v0.2.0-rc.6\data"
 
 Copy-Item "C:\samrai\previous\data\*" `
-  "C:\samrai\samrai-v0.2.0-rc.5\data" `
+  "C:\samrai\samrai-v0.2.0-rc.6\data" `
   -Recurse -Force
 
 Copy-Item "C:\samrai\previous\.env" `
-  "C:\samrai\samrai-v0.2.0-rc.5\.env" `
+  "C:\samrai\samrai-v0.2.0-rc.6\.env" `
   -Force
 
-Set-Location "C:\samrai\samrai-v0.2.0-rc.5"
+Set-Location "C:\samrai\samrai-v0.2.0-rc.6"
 .\test-windows.bat
 .\run-windows.bat
 ```
