@@ -1,0 +1,77 @@
+name: Bug report
+description: Report a reproducible problem in samrai
+title: "bug: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Remove private titles, usernames, notes, and local paths before posting logs or screenshots. Use private vulnerability reporting for security issues.
+  - type: input
+    id: version
+    attributes:
+      label: samrai version
+      description: Use the value shown in Settings or `samrai version`.
+      placeholder: 0.2.0-rc.5
+    validations:
+      required: true
+  - type: dropdown
+    id: install
+    attributes:
+      label: Installation
+      options:
+        - Windows native
+        - Linux native
+        - macOS native
+        - Docker Compose
+        - Other
+    validations:
+      required: true
+  - type: dropdown
+    id: format
+    attributes:
+      label: Book format
+      options:
+        - Not related to a book
+        - CBZ
+        - CBR
+        - CB7
+        - CBT
+        - PDF
+        - EPUB
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: What happened?
+      description: Describe the result and what you expected instead.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open ...
+        2. Select ...
+        3. See ...
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs
+      description: Paste a small redacted excerpt. Do not attach the database or a full backup.
+      render: text
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks
+      options:
+        - label: I tested the newest available release candidate or stable release.
+          required: true
+        - label: I removed private library and account data from this report.
+          required: true

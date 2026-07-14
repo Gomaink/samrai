@@ -1,0 +1,50 @@
+services:
+  samrai:
+    image: samrai:0.2.0-rc.5
+    build:
+      context: .
+      args:
+        VERSION: 0.2.0-rc.5
+        COMMIT: source
+        BUILD_DATE: local
+    container_name: samrai
+    restart: unless-stopped
+    init: true
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp:size=128m,mode=1777
+    stop_grace_period: 20s
+    ports:
+      - "8080:8080"
+    environment:
+      SAMRAI_LOG_LEVEL: info
+      SAMRAI_MAX_DB_CONNECTIONS: 4
+      SAMRAI_SESSION_DURATION: 720h
+      SAMRAI_COOKIE_SECURE: "false"
+      SAMRAI_ARGON2_MEMORY_MIB: 64
+      SAMRAI_ARGON2_ITERATIONS: 3
+      SAMRAI_ARGON2_PARALLELISM: 2
+      SAMRAI_MAX_UPLOAD_MIB: 2048
+      SAMRAI_MAX_ARCHIVE_MIB: 8192
+      SAMRAI_MAX_PAGE_MIB: 128
+      SAMRAI_MAX_ARCHIVE_ENTRIES: 10000
+      SAMRAI_MAX_PAGES: 5000
+      SAMRAI_IMAGE_WORKERS: 2
+      SAMRAI_IMAGE_CACHE_MIB: 5120
+      SAMRAI_IMAGE_QUALITY: 82
+      SAMRAI_IMAGE_MAX_WIDTH: 3840
+      SAMRAI_CACHE_CLEANUP_INTERVAL: 1h
+      SAMRAI_TESSERACT_PATH: /usr/bin/tesseract
+      SAMRAI_OCR_WORKERS: 1
+      SAMRAI_OCR_TIMEOUT: 90s
+    volumes:
+      - samrai-data:/data
+
+volumes:
+  samrai-data:
+    # Existing installations without this variable continue using pageturner-data.
+    name: ${SAMRAI_DOCKER_VOLUME:-pageturner-data}

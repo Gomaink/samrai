@@ -1,0 +1,17 @@
+.env
+/data/
+/bin/
+/dist/
+*.db
+*.db-shm
+*.db-wal
+coverage.out
+.DS_Store
+.idea/
+.vscode/
+/web/node_modules/
+/web/.vite/
+/web/*.tsbuildinfo
+.gotmp/
+.gocache/
+bin/

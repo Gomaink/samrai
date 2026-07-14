@@ -1,0 +1,40 @@
+name: Feature request
+description: Suggest a focused improvement to samrai
+title: "feature: "
+labels:
+  - enhancement
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What is difficult or impossible in the current version?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behavior
+      description: Describe the workflow rather than only the visual result.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Workarounds or alternatives
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Imports
+        - Library and metadata
+        - Comic reader
+        - PDF reader
+        - EPUB reader
+        - Users and authentication
+        - Backup and operations
+        - Docker and installation
+        - Other
+    validations:
+      required: true
