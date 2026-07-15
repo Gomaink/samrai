@@ -50,7 +50,7 @@ try {
         }
     }
 
-    Write-Host "v0.2.0-rc.6 smoke test complete." -ForegroundColor Green
+    Write-Host "v0.2.0-rc.7 smoke test complete." -ForegroundColor Green
 }
 finally {
     $password = $null

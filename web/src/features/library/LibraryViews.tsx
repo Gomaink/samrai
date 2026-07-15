@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api, type Book, type BookQuery, type LibraryStats, type Series } from '../../lib/api'
-import { AlertIcon, BackIcon, ChevronRightIcon, HeartIcon, LibraryIcon, SeriesIcon, SparklesIcon, UploadIcon } from '../../components/Icons'
+import { AlertIcon, BackIcon, CheckIcon, ChevronRightIcon, HeartIcon, LibraryIcon, SeriesIcon, SparklesIcon, UploadIcon } from '../../components/Icons'
 
 export function HomeView({
   canUpload,
@@ -71,15 +71,45 @@ export function BooksView({
   canUpload: boolean
   onUpload: () => void
 }) {
+  const queryClient = useQueryClient()
   const [status, setStatus] = useState<BookQuery['status']>('all')
   const [sort, setSort] = useState<BookQuery['sort']>('recent')
+  const [selected, setSelected] = useState<Set<number>>(() => new Set())
   const deferredSearch = useDebouncedValue(search, 220)
   const books = useQuery({
     queryKey: ['books', { search: deferredSearch, status, sort }],
     queryFn: () => api.books({ search: deferredSearch, status, sort, limit: 500 }),
   })
+  const completion = useMutation({
+    mutationFn: ({ bookIds, completed }: { bookIds: number[]; completed: boolean }) => api.setBooksCompletion(bookIds, completed),
+    onSuccess: () => {
+      setSelected(new Set())
+      invalidateReadingQueries(queryClient)
+    },
+  })
+
+  const visibleIDs = useMemo(() => new Set(books.data?.items.map((book) => book.id) ?? []), [books.data?.items])
+  useEffect(() => {
+    setSelected((current) => {
+      const next = new Set(Array.from(current).filter((id) => visibleIDs.has(id)))
+      return next.size === current.size ? current : next
+    })
+  }, [visibleIDs])
 
   const title = deferredSearch ? `Results for “${deferredSearch}”` : 'My books'
+  const allVisibleSelected = visibleIDs.size > 0 && selected.size === visibleIDs.size
+  function toggleSelection(bookID: number) {
+    setSelected((current) => {
+      const next = new Set(current)
+      if (next.has(bookID)) next.delete(bookID)
+      else next.add(bookID)
+      return next
+    })
+  }
+  function toggleAllVisible() {
+    setSelected(allVisibleSelected ? new Set() : new Set(visibleIDs))
+  }
+
   return (
     <>
       <header className="page-heading">
@@ -92,7 +122,7 @@ export function BooksView({
       </header>
 
       <div className="catalog-toolbar">
-        <div className="filter-tabs" role="group" aria-label="Filtrar books">
+        <div className="filter-tabs" role="group" aria-label="Filter books">
           {([
             ['all', 'All'],
             ['unread', 'Not started'],
@@ -103,7 +133,7 @@ export function BooksView({
           ))}
         </div>
         <label className="sort-control">
-          <span>Ordenar por</span>
+          <span>Sort by</span>
           <select value={sort} onChange={(event) => setSort(event.target.value as BookQuery['sort'])}>
             <option value="recent">Most recent</option>
             <option value="oldest">Oldest</option>
@@ -115,10 +145,24 @@ export function BooksView({
         </label>
       </div>
 
+      {books.data && books.data.items.length > 0 ? (
+        <ReadingSelectionToolbar
+          allSelected={allVisibleSelected}
+          busy={completion.isPending}
+          count={selected.size}
+          error={completion.isError}
+          onClear={() => setSelected(new Set())}
+          onMarkRead={() => completion.mutate({ bookIds: Array.from(selected), completed: true })}
+          onMarkUnread={() => completion.mutate({ bookIds: Array.from(selected), completed: false })}
+          onToggleAll={toggleAllVisible}
+          total={books.data.items.length}
+        />
+      ) : null}
+
       {books.isPending ? <LibraryLoading /> : null}
       {books.isError ? <InlineError onRetry={() => void books.refetch()} /> : null}
       {books.data && books.data.items.length === 0 ? <NoResults search={deferredSearch} /> : null}
-      {books.data && books.data.items.length > 0 ? <BookGrid books={books.data.items} onOpen={onOpenBook} /> : null}
+      {books.data && books.data.items.length > 0 ? <BookGrid books={books.data.items} onOpen={onOpenBook} onToggleSelection={toggleSelection} selectedIDs={selected} /> : null}
     </>
   )
 }
@@ -142,7 +186,7 @@ export function SeriesView({ search, onOpenSeries }: { search: string; onOpenSer
       </header>
       <div className="catalog-toolbar catalog-toolbar-end">
         <label className="sort-control">
-          <span>Ordenar por</span>
+          <span>Sort by</span>
           <select value={sort} onChange={(event) => setSort(event.target.value as typeof sort)}>
             <option value="title">Name</option>
             <option value="recent">Recently updated</option>
@@ -168,6 +212,7 @@ export function SeriesDetailView({
   onOpenBook: (id: number) => void
 }) {
   const queryClient = useQueryClient()
+  const [selected, setSelected] = useState<Set<number>>(() => new Set())
   const query = useQuery({ queryKey: ['series-detail', seriesId], queryFn: () => api.seriesDetail(seriesId) })
   const favorite = useMutation({
     mutationFn: () => api.setSeriesFavorite(seriesId, !query.data?.series.favorite),
@@ -177,13 +222,46 @@ export function SeriesDetailView({
       void queryClient.invalidateQueries({ queryKey: ['favorites'] })
     },
   })
+  const completion = useMutation({
+    mutationFn: ({ bookIds, completed }: { bookIds: number[]; completed: boolean }) => api.setBooksCompletion(bookIds, completed),
+    onSuccess: () => {
+      setSelected(new Set())
+      invalidateReadingQueries(queryClient)
+    },
+  })
+
+  const visibleIDs = useMemo(() => new Set(query.data?.books.map((book) => book.id) ?? []), [query.data?.books])
+  useEffect(() => {
+    setSelected((current) => {
+      const next = new Set(Array.from(current).filter((id) => visibleIDs.has(id)))
+      return next.size === current.size ? current : next
+    })
+  }, [visibleIDs])
+
   if (query.isPending) return <LibraryLoading />
   if (query.isError || !query.data) return <InlineError onRetry={() => void query.refetch()} />
 
   const { series, books } = query.data
+  const allSeriesCompleted = series.book_count > 0 && series.completed_count === series.book_count
+  const allSelected = selected.size > 0 && selected.size === books.length
+  function toggleSelection(bookID: number) {
+    setSelected((current) => {
+      const next = new Set(current)
+      if (next.has(bookID)) next.delete(bookID)
+      else next.add(bookID)
+      return next
+    })
+  }
+
   return (
     <>
-      <div className="series-detail-actions"><button className="button button-secondary series-back" onClick={onBack} type="button"><BackIcon />All series</button><button aria-pressed={series.favorite} className={`button button-secondary${series.favorite ? ' favorite-action-active' : ''}`} disabled={favorite.isPending} onClick={() => favorite.mutate()} type="button"><HeartIcon />{series.favorite ? 'Favorite' : 'Add series to favorites'}</button></div>
+      <div className="series-detail-actions">
+        <button className="button button-secondary series-back" onClick={onBack} type="button"><BackIcon />All series</button>
+        <div className="series-detail-action-group">
+          <button className="button button-secondary" disabled={completion.isPending} onClick={() => completion.mutate({ bookIds: books.map((book) => book.id), completed: !allSeriesCompleted })} type="button"><CheckIcon />{allSeriesCompleted ? 'Mark series as unread' : 'Mark series as read'}</button>
+          <button aria-pressed={series.favorite} className={`button button-secondary${series.favorite ? ' favorite-action-active' : ''}`} disabled={favorite.isPending} onClick={() => favorite.mutate()} type="button"><HeartIcon />{series.favorite ? 'Favorite' : 'Add series to favorites'}</button>
+        </div>
+      </div>
       <section className="series-hero">
         <div className="series-hero-cover">
           {series.cover_url ? <img alt={`Cover of ${series.title}`} src={series.cover_url} /> : <SeriesIcon />}
@@ -200,10 +278,68 @@ export function SeriesDetailView({
         </div>
       </section>
       <LibrarySection title="Volumes and editions" subtitle="Sorted by volume, number, and title">
-        <BookGrid books={books} onOpen={onOpenBook} showVolume />
+        <ReadingSelectionToolbar
+          allSelected={allSelected}
+          busy={completion.isPending}
+          count={selected.size}
+          error={completion.isError}
+          onClear={() => setSelected(new Set())}
+          onMarkRead={() => completion.mutate({ bookIds: Array.from(selected), completed: true })}
+          onMarkUnread={() => completion.mutate({ bookIds: Array.from(selected), completed: false })}
+          onToggleAll={() => setSelected(allSelected ? new Set() : new Set(books.map((book) => book.id)))}
+          total={books.length}
+        />
+        <BookGrid books={books} onOpen={onOpenBook} onToggleSelection={toggleSelection} selectedIDs={selected} showVolume />
       </LibrarySection>
     </>
   )
+}
+
+
+function ReadingSelectionToolbar({
+  total,
+  count,
+  allSelected,
+  busy,
+  error,
+  onToggleAll,
+  onClear,
+  onMarkRead,
+  onMarkUnread,
+}: {
+  total: number
+  count: number
+  allSelected: boolean
+  busy: boolean
+  error: boolean
+  onToggleAll: () => void
+  onClear: () => void
+  onMarkRead: () => void
+  onMarkUnread: () => void
+}) {
+  return (
+    <div className="reading-selection-toolbar" aria-label="Bulk reading status">
+      <div>
+        <strong>{count > 0 ? `${count} selected` : 'Select books to update their reading status'}</strong>
+        <small>{total} {total === 1 ? 'book' : 'books'} in this view</small>
+      </div>
+      <div className="reading-selection-actions">
+        <button className="button button-secondary" disabled={busy} onClick={onToggleAll} type="button">{allSelected ? 'Deselect all' : 'Select all'}</button>
+        {count > 0 ? <button className="button button-secondary" disabled={busy} onClick={onClear} type="button">Clear</button> : null}
+        <button className="button button-secondary" disabled={busy || count === 0} onClick={onMarkUnread} type="button">Mark as unread</button>
+        <button className="button button-primary" disabled={busy || count === 0} onClick={onMarkRead} type="button"><CheckIcon />Mark as read</button>
+      </div>
+      {error ? <p className="form-error">Could not update the selected books.</p> : null}
+    </div>
+  )
+}
+
+function invalidateReadingQueries(queryClient: ReturnType<typeof useQueryClient>) {
+  void queryClient.invalidateQueries({ queryKey: ['book'] })
+  void queryClient.invalidateQueries({ queryKey: ['books'] })
+  void queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+  void queryClient.invalidateQueries({ queryKey: ['series'] })
+  void queryClient.invalidateQueries({ queryKey: ['series-detail'] })
 }
 
 function StatsGrid({ stats }: { stats: LibraryStats }) {
@@ -257,15 +393,48 @@ function ContinueCard({ book, onOpen }: { book: Book; onOpen: () => void }) {
   )
 }
 
-export function BookGrid({ books, onOpen, showVolume = false }: { books: Book[]; onOpen: (id: number) => void; showVolume?: boolean }) {
+export function BookGrid({
+  books,
+  onOpen,
+  showVolume = false,
+  selectedIDs,
+  onToggleSelection,
+}: {
+  books: Book[]
+  onOpen: (id: number) => void
+  showVolume?: boolean
+  selectedIDs?: Set<number>
+  onToggleSelection?: (id: number) => void
+}) {
   return (
     <section className="book-grid" aria-label="Library books">
-      {books.map((book) => <BookCard book={book} key={book.id} onOpen={() => onOpen(book.id)} showVolume={showVolume} />)}
+      {books.map((book) => (
+        <BookCard
+          book={book}
+          key={book.id}
+          onOpen={() => onOpen(book.id)}
+          onToggleSelection={onToggleSelection ? () => onToggleSelection(book.id) : undefined}
+          selected={selectedIDs?.has(book.id) ?? false}
+          showVolume={showVolume}
+        />
+      ))}
     </section>
   )
 }
 
-function BookCard({ book, onOpen, showVolume }: { book: Book; onOpen: () => void; showVolume: boolean }) {
+function BookCard({
+  book,
+  onOpen,
+  showVolume,
+  selected,
+  onToggleSelection,
+}: {
+  book: Book
+  onOpen: () => void
+  showVolume: boolean
+  selected: boolean
+  onToggleSelection?: () => void
+}) {
   const queryClient = useQueryClient()
   const favorite = useMutation({
     mutationFn: () => api.setBookFavorite(book.id, !book.favorite),
@@ -276,10 +445,11 @@ function BookCard({ book, onOpen, showVolume }: { book: Book; onOpen: () => void
       void queryClient.invalidateQueries({ queryKey: ['favorites'] })
     },
   })
-  const progress = book.started && book.page_count > 0 ? Math.round(((book.current_page + 1) / book.page_count) * 100) : 0
+  const progress = book.completed ? 100 : book.started && book.page_count > 0 ? Math.round(((book.current_page + 1) / book.page_count) * 100) : 0
   const volumeLabel = [book.volume ? `Vol. ${book.volume}` : '', book.number ? `#${book.number}` : ''].filter(Boolean).join(' · ')
   return (
-    <article className="library-book">
+    <article className={`library-book${selected ? ' library-book-selected' : ''}`}>
+      {onToggleSelection ? <button aria-label={selected ? `Deselect ${book.title}` : `Select ${book.title}`} aria-pressed={selected} className={`book-selection-button${selected ? ' book-selection-button-active' : ''}`} onClick={onToggleSelection} type="button"><CheckIcon /></button> : null}
       <button aria-label={book.favorite ? 'Remove from favorites' : 'Add to favorites'} aria-pressed={book.favorite} className={`favorite-button${book.favorite ? ' favorite-button-active' : ''}`} disabled={favorite.isPending} onClick={() => favorite.mutate()} type="button"><HeartIcon /></button>
       <button className="library-cover library-cover-button" onClick={onOpen} type="button">
         <img alt={`Cover of ${book.title}`} loading="lazy" src={book.cover_url} />

@@ -2,6 +2,19 @@
 
 This file records user-visible changes. Dates use UTC.
 
+## [0.2.0-rc.7] - 2026-07-15
+
+### Added
+
+- Added manual **Mark as read** and **Mark as unread** actions without discarding the saved page or EPUB location.
+- Added bulk reading-status actions to the books view and series detail pages.
+- Added a one-click action to mark an entire series as read or unread.
+
+### Fixed
+
+- Completed books now show a full 100% progress bar even when they were marked as read before reaching the final page.
+- Replaced two remaining Portuguese filter labels in the library interface.
+
 ## [0.2.0-rc.6] - 2026-07-14
 
 ### Fixed

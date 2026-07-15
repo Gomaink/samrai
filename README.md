@@ -2,7 +2,7 @@
 
 samrai is a self-hosted library and reader for manga, comics, PDFs, and EPUB books. It runs as a single Go server with the web application embedded in the binary and stores its state in SQLite.
 
-> **Release status:** `v0.2.0-rc.6` is a release candidate. Back up the `data` directory before upgrading and report anything that blocks normal reading or library management.
+> **Release status:** `v0.2.0-rc.7` is a release candidate. Back up the `data` directory before upgrading and report anything that blocks normal reading or library management.
 
 <p align="center">
   <a href="https://imgur.com/FkzDTBn">
@@ -16,6 +16,7 @@ samrai is a self-hosted library and reader for manga, comics, PDFs, and EPUB boo
 - Accepts multiple files or a whole folder in one batch.
 - Extracts common series and volume patterns from filenames before upload.
 - Groups books into series and keeps per-user reading progress.
+- Supports manual and bulk read/unread status changes without losing the saved position.
 - Provides paged readers for comics, PDFs, fixed-layout EPUBs, and reflowable EPUBs.
 - Supports PDF search, selective OCR, highlights, notes, and area annotations.
 - Supports EPUB search, highlights, notes, and table-of-contents navigation.
@@ -97,17 +98,17 @@ Stop the old server and copy its entire `data` directory into the new release. D
 Windows example:
 
 ```powershell
-New-Item -ItemType Directory -Force "C:\samrai\samrai-v0.2.0-rc.6\data"
+New-Item -ItemType Directory -Force "C:\samrai\samrai-v0.2.0-rc.7\data"
 
 Copy-Item "C:\samrai\previous\data\*" `
-  "C:\samrai\samrai-v0.2.0-rc.6\data" `
+  "C:\samrai\samrai-v0.2.0-rc.7\data" `
   -Recurse -Force
 
 Copy-Item "C:\samrai\previous\.env" `
-  "C:\samrai\samrai-v0.2.0-rc.6\.env" `
+  "C:\samrai\samrai-v0.2.0-rc.7\.env" `
   -Force
 
-Set-Location "C:\samrai\samrai-v0.2.0-rc.6"
+Set-Location "C:\samrai\samrai-v0.2.0-rc.7"
 .\test-windows.bat
 .\run-windows.bat
 ```

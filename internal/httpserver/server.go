@@ -120,6 +120,7 @@ func New(config Config, db *sql.DB, authService *auth.Service, importService *im
 	mux.Handle("GET /api/v1/books/{bookID}/annotations/export", server.requireAuthentication(http.HandlerFunc(server.exportAnnotations)))
 	mux.Handle("PATCH /api/v1/annotations/{annotationID}", server.requireAuthentication(http.HandlerFunc(server.updateAnnotation)))
 	mux.Handle("DELETE /api/v1/annotations/{annotationID}", server.requireAuthentication(http.HandlerFunc(server.deleteAnnotation)))
+	mux.Handle("PATCH /api/v1/books/progress/completion", server.requireAuthentication(http.HandlerFunc(server.setBooksCompletion)))
 	mux.Handle("PUT /api/v1/books/{bookID}/progress", server.requireAuthentication(http.HandlerFunc(server.saveBookProgress)))
 	mux.Handle("DELETE /api/v1/books/{bookID}/progress", server.requireAuthentication(http.HandlerFunc(server.resetBookProgress)))
 	mux.Handle("GET /api/v1/settings", server.requireAuthentication(http.HandlerFunc(server.instanceSettings)))

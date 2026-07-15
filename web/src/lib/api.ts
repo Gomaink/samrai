@@ -598,6 +598,7 @@ export const api = {
     request<Book>(`/api/v1/books/${bookId}`, { method: 'PATCH', body: JSON.stringify(input) }),
   deleteBook: (bookId: number) => request<void>(`/api/v1/books/${bookId}`, { method: 'DELETE' }),
   resetProgress: (bookId: number) => request<void>(`/api/v1/books/${bookId}/progress`, { method: 'DELETE' }),
+  setBooksCompletion: (bookIds: number[], completed: boolean) => request<{ updated: number; completed: boolean }>('/api/v1/books/progress/completion', { method: 'PATCH', body: JSON.stringify({ book_ids: bookIds, completed }) }),
   metrics: () => request<SystemMetrics>('/api/v1/system/metrics'),
   saveProgress: (bookId: number, currentPage: number, location?: object, sessionId?: string) =>
     request<ReadingProgress>(`/api/v1/books/${bookId}/progress`, {

@@ -1,27 +1,28 @@
-# samrai v0.2.0-rc.6
+# samrai v0.2.0-rc.7
 
-Release candidate 6 fixes two test fixtures introduced while translating the repository to English.
+Release candidate 7 adds manual and bulk reading-status controls.
 
-## What was wrong
+## Reading status
 
-The application code was behaving correctly, but two PDF catalog tests no longer represented their original cases:
+A book can now be marked as read or unread from its detail page. Changing the status does not move the reader or discard the saved page, EPUB section, or location.
 
-- the metadata limit test expected the word `title` after truncating a longer English phrase to six runes;
-- the excerpt test searched for `montreal` and then required the original accented text `Montréal` to contain the unaccented spelling.
+The books view also supports selecting multiple titles and applying either status in one operation. Series pages include the same selection controls, plus a shortcut for marking the entire series as read or unread.
 
-## Fix
+A book that has never been opened can still be marked as read. Marking it as unread later keeps the progress record at its initial position; use **Reset progress** when the book should return to **Not started**.
 
-The metadata test now uses `résumé` to verify trimming and Unicode rune boundaries. The excerpt test now uses an unaccented matched term, while accent-insensitive search remains covered by its dedicated test.
+## Other fixes
 
-No database migration or runtime behavior changes are included in this release.
+- Manually completed books display 100% progress throughout the interface.
+- The remaining Portuguese sort and filter labels were replaced with English text.
+- Reading-status updates are atomic: a batch containing a missing book is rejected without changing the other books.
 
-## Upgrade from rc.5
+## Upgrade from rc.6
 
-1. Stop rc.5.
-2. Extract rc.6 to a new directory.
-3. Copy the complete rc.5 `data` directory.
-4. Copy the rc.5 `.env` file.
+1. Stop rc.6.
+2. Extract rc.7 to a new directory.
+3. Copy the complete rc.6 `data` directory.
+4. Copy the rc.6 `.env` file.
 5. Run `test-windows.bat`.
-6. Start rc.6.
+6. Start rc.7.
 
-All library data and settings remain compatible.
+No database migration is required. Existing progress, annotations, history, and library files remain compatible.

@@ -60,6 +60,20 @@ export function BookDetails({
       void queryClient.invalidateQueries({ queryKey: ['series'] })
     },
   })
+  const completion = useMutation({
+    mutationFn: (completed: boolean) => api.setBooksCompletion([bookId], completed),
+    onSuccess: (_, completed) => {
+      queryClient.setQueryData<Book>(['book', bookId], (current) => current ? {
+        ...current,
+        started: completed ? true : current.started,
+        completed,
+      } : current)
+      void queryClient.invalidateQueries({ queryKey: ['books'] })
+      void queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+      void queryClient.invalidateQueries({ queryKey: ['series'] })
+      void queryClient.invalidateQueries({ queryKey: ['series-detail'] })
+    },
+  })
   const favorite = useMutation({
     mutationFn: () => api.setBookFavorite(bookId, !bookQuery.data?.favorite),
     onSuccess: ({ favorite }) => {
@@ -101,7 +115,7 @@ export function BookDetails({
   }
 
   const book = bookQuery.data
-  const progress = book.page_count > 0 ? Math.round(((book.current_page + (book.started ? 1 : 0)) / book.page_count) * 100) : 0
+  const progress = book.completed ? 100 : book.page_count > 0 ? Math.round(((book.current_page + (book.started ? 1 : 0)) / book.page_count) * 100) : 0
 
   function submit(event: FormEvent) {
     event.preventDefault()
@@ -140,10 +154,12 @@ export function BookDetails({
           </div>
 
           <div className="book-hero-actions">
-            <button className="button button-primary" disabled={reset.isPending} onClick={() => void startReading()} type="button">{book.started && !book.completed ? 'Continue reading' : book.completed ? 'Read again' : 'Start reading'}</button>
+            <button className="button button-primary" disabled={reset.isPending || completion.isPending} onClick={() => void startReading()} type="button">{book.started && !book.completed ? 'Continue reading' : book.completed ? 'Read again' : 'Start reading'}</button>
+            <button className="button button-secondary" disabled={completion.isPending || reset.isPending} onClick={() => completion.mutate(!book.completed)} type="button"><CheckIcon />{book.completed ? 'Mark as unread' : 'Mark as read'}</button>
             <button aria-pressed={book.favorite} className={`button button-secondary${book.favorite ? ' favorite-action-active' : ''}`} disabled={favorite.isPending} onClick={() => favorite.mutate()} type="button"><HeartIcon />{book.favorite ? 'Favorite' : 'Add to favorites'}</button>
-            {book.started ? <button className="button button-secondary" disabled={reset.isPending} onClick={() => window.confirm('Reset reading progress for this book?') && reset.mutate()} type="button">Reset progress</button> : null}
+            {book.started ? <button className="button button-secondary" disabled={reset.isPending || completion.isPending} onClick={() => window.confirm('Reset reading progress for this book?') && reset.mutate()} type="button">Reset progress</button> : null}
           </div>
+          {completion.isError ? <p className="form-error">Could not update the reading status.</p> : null}
         </div>
       </section>
 

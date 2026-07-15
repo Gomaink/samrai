@@ -23,6 +23,16 @@ type updateBookRequest struct {
 	Series               *string `json:"series"`
 }
 
+type setReadingCompletionRequest struct {
+	BookIDs   []int64 `json:"book_ids"`
+	Completed *bool   `json:"completed"`
+}
+
+type setReadingCompletionResponse struct {
+	Updated   int  `json:"updated"`
+	Completed bool `json:"completed"`
+}
+
 func (s *Server) updateBook(w http.ResponseWriter, r *http.Request) {
 	principal, ok := auth.PrincipalFromContext(r.Context())
 	if !ok {
@@ -87,6 +97,34 @@ func (s *Server) deleteBook(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	w.WriteHeader(http.StatusNoContent)
+}
+
+func (s *Server) setBooksCompletion(w http.ResponseWriter, r *http.Request) {
+	principal, ok := auth.PrincipalFromContext(r.Context())
+	if !ok {
+		writeError(w, http.StatusUnauthorized, "authentication_required", "Authentication required.")
+		return
+	}
+	var request setReadingCompletionRequest
+	if err := decodeJSON(w, r, &request); err != nil || request.Completed == nil {
+		writeError(w, http.StatusBadRequest, "invalid_request", "Provide book_ids and completed.")
+		return
+	}
+	updated, err := s.catalog.SetCompletion(r.Context(), principal.User.ID, request.BookIDs, *request.Completed)
+	switch {
+	case errors.Is(err, catalog.ErrBookNotFound):
+		writeError(w, http.StatusNotFound, "book_not_found", "One or more books were not found.")
+		return
+	case errors.Is(err, catalog.ErrInvalidBook):
+		writeError(w, http.StatusUnprocessableEntity, "invalid_books", "Provide between 1 and 500 valid book IDs.")
+		return
+	case err != nil:
+		s.logger.Error("set reading completion", "user_id", principal.User.ID, "book_count", len(request.BookIDs), "completed", *request.Completed, "error", err)
+		writeError(w, http.StatusInternalServerError, "internal_error", "Could not update reading status.")
+		return
+	}
+	w.Header().Set("Cache-Control", "no-store")
+	writeJSON(w, http.StatusOK, setReadingCompletionResponse{Updated: updated, Completed: *request.Completed})
 }
 
 func (s *Server) resetBookProgress(w http.ResponseWriter, r *http.Request) {

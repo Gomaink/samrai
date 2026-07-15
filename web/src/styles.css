@@ -2379,3 +2379,52 @@ h1, h2, h3, .brand-lockup { font-family: inherit; font-weight: 650; }
 }
 .drop-zone-disabled { cursor: default; opacity: .72; }
 .drop-zone-disabled:hover { transform: none; border-color: rgba(255,255,255,.17); background: #09080d; }
+
+/* Manual and bulk reading status */
+.reading-selection-toolbar {
+  margin: 0 0 20px;
+  padding: 12px 13px;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  background: #0b0a10;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px 18px;
+}
+.reading-selection-toolbar > div:first-child { min-width: 0; display: grid; gap: 3px; }
+.reading-selection-toolbar strong { font-size: 10px; font-weight: 580; }
+.reading-selection-toolbar small { color: #716979; font-size: 8px; }
+.reading-selection-toolbar > .form-error { grid-column: 1 / -1; margin: 0; }
+.reading-selection-actions { display: flex; align-items: center; justify-content: flex-end; gap: 7px; flex-wrap: wrap; }
+.reading-selection-actions .button { min-height: 34px; padding-inline: 11px; font-size: 9px; }
+.book-selection-button {
+  position: absolute;
+  z-index: 5;
+  top: .65rem;
+  left: .65rem;
+  width: 2.35rem;
+  height: 2.35rem;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(255,255,255,.15);
+  border-radius: 2px;
+  background: rgba(10,9,14,.82);
+  color: #8b8392;
+  cursor: pointer;
+  backdrop-filter: blur(10px);
+}
+.book-selection-button svg { width: 15px; height: 15px; }
+.book-selection-button:hover { color: #eee8f2; border-color: #6b537b; }
+.book-selection-button-active { color: #09070c; border-color: var(--accent-strong); background: var(--accent-strong); }
+.library-book-selected .library-cover { border-color: var(--accent-strong); box-shadow: 5px 6px 0 rgba(180,92,255,.22); }
+.series-detail-actions { margin-bottom: 25px; }
+.series-detail-actions .series-back { margin-bottom: 0; }
+.series-detail-action-group { display: flex; align-items: center; justify-content: flex-end; gap: 8px; flex-wrap: wrap; }
+
+@media (max-width: 760px) {
+  .reading-selection-toolbar { grid-template-columns: 1fr; align-items: stretch; }
+  .reading-selection-actions { justify-content: stretch; }
+  .reading-selection-actions .button { flex: 1 1 calc(50% - 4px); justify-content: center; }
+  .series-detail-action-group { display: grid; grid-template-columns: 1fr; }
+}

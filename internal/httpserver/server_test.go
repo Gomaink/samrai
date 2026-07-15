@@ -357,6 +357,28 @@ func TestUploadImportsCBZAndListsBook(t *testing.T) {
 		t.Fatalf("books after progress = %d %s", booksAfterProgress.Code, booksAfterProgress.Body.String())
 	}
 
+	markUnread := performRequest(t, server, http.MethodPatch, "/api/v1/books/progress/completion", map[string]any{
+		"book_ids":  []int64{1},
+		"completed": false,
+	}, cookie)
+	if markUnread.Code != http.StatusOK || !bytes.Contains(markUnread.Body.Bytes(), []byte(`"updated":1`)) || !bytes.Contains(markUnread.Body.Bytes(), []byte(`"completed":false`)) {
+		t.Fatalf("mark unread response = %d %s", markUnread.Code, markUnread.Body.String())
+	}
+	bookAfterUnread := performRequest(t, server, http.MethodGet, "/api/v1/books/1", nil, cookie)
+	if bookAfterUnread.Code != http.StatusOK ||
+		!bytes.Contains(bookAfterUnread.Body.Bytes(), []byte(`"current_page":1`)) ||
+		!bytes.Contains(bookAfterUnread.Body.Bytes(), []byte(`"completed":false`)) {
+		t.Fatalf("book after unread = %d %s", bookAfterUnread.Code, bookAfterUnread.Body.String())
+	}
+
+	markRead := performRequest(t, server, http.MethodPatch, "/api/v1/books/progress/completion", map[string]any{
+		"book_ids":  []int64{1},
+		"completed": true,
+	}, cookie)
+	if markRead.Code != http.StatusOK || !bytes.Contains(markRead.Body.Bytes(), []byte(`"completed":true`)) {
+		t.Fatalf("mark read response = %d %s", markRead.Code, markRead.Body.String())
+	}
+
 	missingPage := performRequest(t, server, http.MethodGet, "/api/v1/books/1/pages/2/image", nil, cookie)
 	if missingPage.Code != http.StatusNotFound {
 		t.Fatalf("missing page status = %d: %s", missingPage.Code, missingPage.Body.String())

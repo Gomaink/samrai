@@ -300,6 +300,73 @@ func (s *Service) DeleteBook(ctx context.Context, bookID int64) (DeletedBook, er
 	return deleted, nil
 }
 
+func (s *Service) SetCompletion(ctx context.Context, userID int64, bookIDs []int64, completed bool) (int, error) {
+	unique := make([]int64, 0, len(bookIDs))
+	seen := make(map[int64]struct{}, len(bookIDs))
+	for _, bookID := range bookIDs {
+		if bookID <= 0 {
+			return 0, ErrInvalidBook
+		}
+		if _, exists := seen[bookID]; exists {
+			continue
+		}
+		seen[bookID] = struct{}{}
+		unique = append(unique, bookID)
+	}
+	if len(unique) == 0 || len(unique) > 500 {
+		return 0, ErrInvalidBook
+	}
+
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return 0, fmt.Errorf("begin reading completion update: %w", err)
+	}
+	defer tx.Rollback()
+
+	placeholders := strings.TrimSuffix(strings.Repeat("?,", len(unique)), ",")
+	args := make([]any, len(unique))
+	for index, bookID := range unique {
+		args[index] = bookID
+	}
+	var found int
+	if err := tx.QueryRowContext(ctx, `SELECT COUNT(*) FROM books WHERE status = 'ready' AND id IN (`+placeholders+`)`, args...).Scan(&found); err != nil {
+		return 0, fmt.Errorf("check books for reading completion update: %w", err)
+	}
+	if found != len(unique) {
+		return 0, ErrBookNotFound
+	}
+
+	for _, bookID := range unique {
+		if completed {
+			if _, err := tx.ExecContext(ctx, `
+				INSERT INTO reading_progress(user_id, book_id, current_page, completed, completed_at, location_json)
+				VALUES (?, ?, 0, 1, strftime('%Y-%m-%dT%H:%M:%fZ', 'now'), '{}')
+				ON CONFLICT(user_id, book_id) DO UPDATE SET
+					completed = 1,
+					completed_at = COALESCE(reading_progress.completed_at, strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+					updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+			`, userID, bookID); err != nil {
+				return 0, fmt.Errorf("mark book as read: %w", err)
+			}
+			continue
+		}
+		if _, err := tx.ExecContext(ctx, `
+			UPDATE reading_progress
+			SET completed = 0,
+				completed_at = NULL,
+				updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+			WHERE user_id = ? AND book_id = ?
+		`, userID, bookID); err != nil {
+			return 0, fmt.Errorf("mark book as unread: %w", err)
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		return 0, fmt.Errorf("commit reading completion update: %w", err)
+	}
+	return len(unique), nil
+}
+
 func (s *Service) ResetProgress(ctx context.Context, userID, bookID int64) error {
 	var exists int
 	if err := s.db.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM books WHERE id = ? AND status = 'ready')`, bookID).Scan(&exists); err != nil {

@@ -166,3 +166,70 @@ func TestListAllAnnotationsCombinesPDFAndEPUB(t *testing.T) {
 		t.Fatalf("book title search returned total=%d items=%+v", filteredTotal, filtered)
 	}
 }
+
+func TestSetCompletionPreservesReadingPosition(t *testing.T) {
+	service, userID, firstBookID, secondBookID, _ := newEngagementTestService(t)
+	ctx := context.Background()
+
+	progress, err := service.SaveProgress(ctx, userID, firstBookID, 7, json.RawMessage(`{"page":7,"zoom":1.25}`))
+	if err != nil {
+		t.Fatalf("save progress: %v", err)
+	}
+	if progress.Completed {
+		t.Fatal("progress was completed before the manual update")
+	}
+
+	updated, err := service.SetCompletion(ctx, userID, []int64{firstBookID, secondBookID, firstBookID}, true)
+	if err != nil {
+		t.Fatalf("mark books as read: %v", err)
+	}
+	if updated != 2 {
+		t.Fatalf("updated = %d, want 2 unique books", updated)
+	}
+
+	first, err := service.GetBook(ctx, userID, firstBookID)
+	if err != nil {
+		t.Fatalf("get first book: %v", err)
+	}
+	if !first.Completed || first.CurrentPage != 7 || string(first.ReadingLocation) != `{"page":7,"zoom":1.25}` {
+		t.Fatalf("manual completion changed the saved position: %+v", first)
+	}
+	second, err := service.GetBook(ctx, userID, secondBookID)
+	if err != nil {
+		t.Fatalf("get second book: %v", err)
+	}
+	if !second.Started || !second.Completed || second.CurrentPage != 0 {
+		t.Fatalf("unstarted book was not marked as read: %+v", second)
+	}
+
+	updated, err = service.SetCompletion(ctx, userID, []int64{firstBookID, secondBookID}, false)
+	if err != nil {
+		t.Fatalf("mark books as unread: %v", err)
+	}
+	if updated != 2 {
+		t.Fatalf("updated = %d, want 2", updated)
+	}
+	first, err = service.GetBook(ctx, userID, firstBookID)
+	if err != nil {
+		t.Fatalf("get first book after unread: %v", err)
+	}
+	if first.Completed || first.CurrentPage != 7 || string(first.ReadingLocation) != `{"page":7,"zoom":1.25}` {
+		t.Fatalf("mark as unread did not preserve the saved position: %+v", first)
+	}
+}
+
+func TestSetCompletionRejectsMissingBookAtomically(t *testing.T) {
+	service, userID, firstBookID, _, _ := newEngagementTestService(t)
+	ctx := context.Background()
+
+	if _, err := service.SetCompletion(ctx, userID, []int64{firstBookID, 999999}, true); !errors.Is(err, ErrBookNotFound) {
+		t.Fatalf("SetCompletion error = %v, want %v", err, ErrBookNotFound)
+	}
+	book, err := service.GetBook(ctx, userID, firstBookID)
+	if err != nil {
+		t.Fatalf("get book: %v", err)
+	}
+	if book.Started || book.Completed {
+		t.Fatalf("partial completion was committed: %+v", book)
+	}
+}

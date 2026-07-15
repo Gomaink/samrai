@@ -9,7 +9,7 @@ From the extracted release directory:
 ```powershell
 git init
 git add .
-git commit -m "release: samrai v0.2.0-rc.6"
+git commit -m "release: samrai v0.2.0-rc.7"
 git branch -M main
 git remote add origin https://github.com/<github-user>/samrai.git
 git push -u origin main
@@ -18,8 +18,8 @@ git push -u origin main
 Wait for the `CI` workflow to pass before creating the release tag:
 
 ```powershell
-git tag -a v0.2.0-rc.6 -m "samrai v0.2.0-rc.6"
-git push origin v0.2.0-rc.6
+git tag -a v0.2.0-rc.7 -m "samrai v0.2.0-rc.7"
+git push origin v0.2.0-rc.7
 ```
 
 The tag starts the `Release` workflow. It builds and publishes the container image, creates the source archives and checksum manifest, and opens a GitHub prerelease using `RELEASE_NOTES.md`.
@@ -57,7 +57,7 @@ The Makefile injects version, commit, and UTC build time through Go linker flags
 Release tags use the form:
 
 ```text
-v0.2.0-rc.6
+v0.2.0-rc.7
 v0.2.0
 ```
 
