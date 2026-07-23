@@ -2,7 +2,7 @@
 
 samrai is a self-hosted library and reader for manga, comics, PDFs, and EPUB books. It runs as a single Go server with the web application embedded in the binary and stores its state in SQLite.
 
-> **Release status:** `v0.2.0-rc.8` is a release candidate. Back up the `data` directory before upgrading and report anything that blocks normal reading or library management.
+> **Release status:** `v0.2.0-rc.9` is a release candidate. Back up the `data` directory before upgrading and report anything that blocks normal reading or library management.
 
 <p align="center">
   <a href="https://imgur.com/FkzDTBn">
@@ -84,7 +84,7 @@ docker compose up -d
 docker compose logs -f samrai
 ```
 
-Open `http://127.0.0.1:24600/`. The Compose file uses the published `ghcr.io/gomaink/samrai:0.2.0-rc.8` image and maps host port `24600` to port `8080` in the container.
+Open `http://127.0.0.1:24600/`. The Compose file uses the published `ghcr.io/gomaink/samrai:0.2.0-rc.9` image and maps host port `24600` to port `8080` in the container.
 
 New installations use the named volume `samrai-data`. An older `.env` without `SAMRAI_DOCKER_VOLUME` continues to use the legacy `pageturner-data` volume.
 
@@ -101,17 +101,17 @@ Stop the old server and copy its entire `data` directory into the new release. D
 Windows example:
 
 ```powershell
-New-Item -ItemType Directory -Force "C:\samrai\samrai-v0.2.0-rc.8\data"
+New-Item -ItemType Directory -Force "C:\samrai\samrai-v0.2.0-rc.9\data"
 
-Copy-Item "C:\samrai\samrai-v0.2.0-rc.7\data\*" `
-  "C:\samrai\samrai-v0.2.0-rc.8\data" `
+Copy-Item "C:\samrai\samrai-v0.2.0-rc.8\data\*" `
+  "C:\samrai\samrai-v0.2.0-rc.9\data" `
   -Recurse -Force
 
-Copy-Item "C:\samrai\samrai-v0.2.0-rc.7\.env" `
-  "C:\samrai\samrai-v0.2.0-rc.8\.env" `
+Copy-Item "C:\samrai\samrai-v0.2.0-rc.8\.env" `
+  "C:\samrai\samrai-v0.2.0-rc.9\.env" `
   -Force
 
-Set-Location "C:\samrai\samrai-v0.2.0-rc.8"
+Set-Location "C:\samrai\samrai-v0.2.0-rc.9"
 .\test-windows.bat
 .\run-windows.bat
 ```

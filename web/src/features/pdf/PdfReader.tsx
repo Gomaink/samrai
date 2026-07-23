@@ -44,16 +44,19 @@ type SelectionDraft = {
 type AreaDrag = { startX: number; startY: number; currentX: number; currentY: number }
 
 type ReaderTapGesture = {
-  pointerId: number
+  touchIdentifier: number
   startX: number
   startY: number
   startedAt: number
+  startScrollLeft: number
+  startScrollTop: number
   suppress: boolean
+  selectionChanged: boolean
 }
 
 const readerTapMoveTolerance = 12
 const readerTapMaximumDuration = 450
-const readerDoubleTapDelay = 280
+const readerDoubleTapDelay = 320
 const readerDoubleTapDistance = 28
 
 const colors: AnnotationColor[] = ['yellow', 'green', 'blue', 'pink', 'orange']
@@ -78,7 +81,7 @@ export function PdfReader({ book, onClose }: { book: Book; onClose: () => void }
   const saveTimerRef = useRef<number | null>(null)
   const selectionFrameRef = useRef<number | null>(null)
   const tapGestureRef = useRef<ReaderTapGesture | null>(null)
-  const activeTouchPointersRef = useRef(new Set<number>())
+  const activeTouchIdentifiersRef = useRef(new Set<number>())
   const pendingTapTimerRef = useRef<number | null>(null)
   const recentTapRef = useRef<{ x: number; y: number; at: number } | null>(null)
   const lastSavedPageRef = useRef(book.started ? book.current_page : -1)
@@ -346,10 +349,16 @@ export function PdfReader({ book, onClose }: { book: Book; onClose: () => void }
 
     document.addEventListener('selectionchange', scheduleSelectionPreview)
     window.addEventListener('pointerup', finishSelecting)
+    window.addEventListener('pointercancel', finishSelecting)
+    window.addEventListener('touchend', finishSelecting)
+    window.addEventListener('touchcancel', finishSelecting)
     window.addEventListener('blur', finishSelecting)
     return () => {
       document.removeEventListener('selectionchange', scheduleSelectionPreview)
       window.removeEventListener('pointerup', finishSelecting)
+      window.removeEventListener('pointercancel', finishSelecting)
+      window.removeEventListener('touchend', finishSelecting)
+      window.removeEventListener('touchcancel', finishSelecting)
       window.removeEventListener('blur', finishSelecting)
       if (selectionFrameRef.current !== null) window.cancelAnimationFrame(selectionFrameRef.current)
     }
@@ -506,7 +515,7 @@ export function PdfReader({ book, onClose }: { book: Book; onClose: () => void }
 
   function startArea(event: ReactPointerEvent<HTMLDivElement>) {
     if (!areaMode) {
-      if (event.button === 0) textLayerRef.current?.classList.add('selecting')
+      if (event.pointerType !== 'touch' && event.button === 0) textLayerRef.current?.classList.add('selecting')
       return
     }
     if (event.button !== 0) return
@@ -539,83 +548,155 @@ export function PdfReader({ book, onClose }: { book: Book; onClose: () => void }
     pendingTapTimerRef.current = null
   }
 
-  function startReaderTap(event: ReactPointerEvent<HTMLElement>) {
-    if (event.pointerType !== 'touch') return
+  useEffect(() => {
+    const stage = stageRef.current
+    if (!stage) return
 
-    activeTouchPointersRef.current.add(event.pointerId)
-    if (activeTouchPointersRef.current.size > 1) {
+    function clearGesture() {
       tapGestureRef.current = null
+    }
+
+    function rememberActiveTouches(touches: TouchList) {
+      const active = activeTouchIdentifiersRef.current
+      active.clear()
+      for (let index = 0; index < touches.length; index += 1) {
+        const touch = touches.item(index)
+        if (touch) active.add(touch.identifier)
+      }
+    }
+
+    function touchByIdentifier(touches: TouchList, identifier: number) {
+      for (let index = 0; index < touches.length; index += 1) {
+        const touch = touches.item(index)
+        if (touch?.identifier === identifier) return touch
+      }
+      return null
+    }
+
+    function startReaderTouch(event: TouchEvent) {
+      rememberActiveTouches(event.touches)
+      if (event.touches.length !== 1) {
+        clearGesture()
+        cancelPendingReaderTap()
+        return
+      }
+
+      const touch = event.touches.item(0)
+      if (!touch) return
+
+      const now = performance.now()
+      const recentTap = recentTapRef.current
+      const isSecondTap = recentTap !== null
+        && now - recentTap.at <= readerDoubleTapDelay + 80
+        && Math.hypot(touch.clientX - recentTap.x, touch.clientY - recentTap.y) <= readerDoubleTapDistance
+
+      if (isSecondTap) {
+        cancelPendingReaderTap()
+        recentTapRef.current = null
+      }
+
+      if (readerTapIsUnavailable() || isReaderTapBlockedTarget(event.target) || hasPDFTextSelection(textLayerRef.current)) {
+        clearGesture()
+        return
+      }
+
+      tapGestureRef.current = {
+        touchIdentifier: touch.identifier,
+        startX: touch.clientX,
+        startY: touch.clientY,
+        startedAt: now,
+        startScrollLeft: stage.scrollLeft,
+        startScrollTop: stage.scrollTop,
+        suppress: isSecondTap,
+        selectionChanged: false,
+      }
+    }
+
+    function moveReaderTouch(event: TouchEvent) {
+      rememberActiveTouches(event.touches)
+      const gesture = tapGestureRef.current
+      if (!gesture) return
+      if (event.touches.length !== 1) {
+        clearGesture()
+        cancelPendingReaderTap()
+        return
+      }
+
+      const touch = touchByIdentifier(event.touches, gesture.touchIdentifier)
+      if (!touch
+        || Math.hypot(touch.clientX - gesture.startX, touch.clientY - gesture.startY) > readerTapMoveTolerance
+        || Math.abs(stage.scrollLeft - gesture.startScrollLeft) > 2
+        || Math.abs(stage.scrollTop - gesture.startScrollTop) > 2) {
+        clearGesture()
+      }
+    }
+
+    function finishReaderTouch(event: TouchEvent) {
+      rememberActiveTouches(event.touches)
+      const gesture = tapGestureRef.current
+      if (!gesture) return
+
+      const touch = touchByIdentifier(event.changedTouches, gesture.touchIdentifier)
+      if (!touch) return
+      clearGesture()
+
+      const now = performance.now()
+      if (gesture.suppress
+        || now - gesture.startedAt > readerTapMaximumDuration
+        || gesture.selectionChanged
+        || isReaderTapBlockedTarget(event.target)
+        || readerTapIsUnavailable()
+        || Math.abs(stage.scrollLeft - gesture.startScrollLeft) > 2
+        || Math.abs(stage.scrollTop - gesture.startScrollTop) > 2) return
+
+      recentTapRef.current = { x: touch.clientX, y: touch.clientY, at: now }
+      const clientX = touch.clientX
       cancelPendingReaderTap()
-      return
+      pendingTapTimerRef.current = window.setTimeout(() => {
+        pendingTapTimerRef.current = null
+        if (activeTouchIdentifiersRef.current.size > 0
+          || readerTapIsUnavailable()
+          || hasPDFTextSelection(textLayerRef.current)
+          || Math.abs(stage.scrollLeft - gesture.startScrollLeft) > 2
+          || Math.abs(stage.scrollTop - gesture.startScrollTop) > 2) return
+
+        const bounds = stage.getBoundingClientRect()
+        const position = clamp((clientX - bounds.left) / Math.max(1, bounds.width), 0, 1)
+        if (position < 1 / 3) previous()
+        else if (position > 2 / 3) next()
+        else setControlsVisible((value) => !value)
+      }, readerDoubleTapDelay)
     }
 
-    const now = performance.now()
-    const recentTap = recentTapRef.current
-    const isSecondTap = recentTap !== null
-      && now - recentTap.at <= readerDoubleTapDelay + 80
-      && Math.hypot(event.clientX - recentTap.x, event.clientY - recentTap.y) <= readerDoubleTapDistance
-
-    if (isSecondTap) cancelPendingReaderTap()
-    if (readerTapIsUnavailable() || isReaderTapBlockedTarget(event.target)) {
-      tapGestureRef.current = null
-      return
+    function cancelReaderTouch(event: TouchEvent) {
+      rememberActiveTouches(event.touches)
+      clearGesture()
+      cancelPendingReaderTap()
     }
 
-    tapGestureRef.current = {
-      pointerId: event.pointerId,
-      startX: event.clientX,
-      startY: event.clientY,
-      startedAt: now,
-      suppress: isSecondTap,
+    function markReaderTouchSelection() {
+      const gesture = tapGestureRef.current
+      if (gesture && hasPDFTextSelection(textLayerRef.current)) gesture.selectionChanged = true
     }
-  }
 
-  function moveReaderTap(event: ReactPointerEvent<HTMLElement>) {
-    if (event.pointerType !== 'touch') return
-    const gesture = tapGestureRef.current
-    if (!gesture || gesture.pointerId !== event.pointerId) return
-    if (Math.hypot(event.clientX - gesture.startX, event.clientY - gesture.startY) > readerTapMoveTolerance) {
-      tapGestureRef.current = null
+    const listenerOptions: AddEventListenerOptions = { capture: true, passive: true }
+    stage.addEventListener('touchstart', startReaderTouch, listenerOptions)
+    stage.addEventListener('touchmove', moveReaderTouch, listenerOptions)
+    stage.addEventListener('touchend', finishReaderTouch, listenerOptions)
+    stage.addEventListener('touchcancel', cancelReaderTouch, listenerOptions)
+    document.addEventListener('selectionchange', markReaderTouchSelection)
+
+    return () => {
+      stage.removeEventListener('touchstart', startReaderTouch, listenerOptions)
+      stage.removeEventListener('touchmove', moveReaderTouch, listenerOptions)
+      stage.removeEventListener('touchend', finishReaderTouch, listenerOptions)
+      stage.removeEventListener('touchcancel', cancelReaderTouch, listenerOptions)
+      document.removeEventListener('selectionchange', markReaderTouchSelection)
+      activeTouchIdentifiersRef.current.clear()
+      clearGesture()
+      cancelPendingReaderTap()
     }
-  }
-
-  function finishReaderTap(event: ReactPointerEvent<HTMLElement>) {
-    if (event.pointerType !== 'touch') return
-    activeTouchPointersRef.current.delete(event.pointerId)
-
-    const gesture = tapGestureRef.current
-    if (!gesture || gesture.pointerId !== event.pointerId) return
-    tapGestureRef.current = null
-
-    const now = performance.now()
-    recentTapRef.current = { x: event.clientX, y: event.clientY, at: now }
-    if (gesture.suppress
-      || now - gesture.startedAt > readerTapMaximumDuration
-      || event.defaultPrevented
-      || isReaderTapBlockedTarget(event.target)
-      || readerTapIsUnavailable()) return
-
-    const clientX = event.clientX
-    cancelPendingReaderTap()
-    pendingTapTimerRef.current = window.setTimeout(() => {
-      pendingTapTimerRef.current = null
-      if (activeTouchPointersRef.current.size > 0 || readerTapIsUnavailable() || hasPDFTextSelection(textLayerRef.current)) return
-
-      const stage = stageRef.current
-      if (!stage) return
-      const bounds = stage.getBoundingClientRect()
-      const position = clamp((clientX - bounds.left) / Math.max(1, bounds.width), 0, 1)
-      if (position < 1 / 3) previous()
-      else if (position > 2 / 3) next()
-      else setControlsVisible((value) => !value)
-    }, readerDoubleTapDelay)
-  }
-
-  function cancelReaderTap(event: ReactPointerEvent<HTMLElement>) {
-    if (event.pointerType !== 'touch') return
-    activeTouchPointersRef.current.delete(event.pointerId)
-    if (tapGestureRef.current?.pointerId === event.pointerId) tapGestureRef.current = null
-  }
+  }, [annotationsOpen, areaMode, loadError, next, passwordPrompt, previous, rendering, searchOpen, selectedAnnotation, selectionDraft])
 
   function readerTapIsUnavailable() {
     return areaMode || rendering || Boolean(loadError || passwordPrompt || selectionDraft || selectedAnnotation || searchOpen || annotationsOpen)
@@ -651,10 +732,6 @@ export function PdfReader({ book, onClose }: { book: Book; onClose: () => void }
         onClick={(event) => {
           if (event.target === event.currentTarget) setControlsVisible((value) => !value)
         }}
-        onPointerDownCapture={startReaderTap}
-        onPointerMoveCapture={moveReaderTap}
-        onPointerUpCapture={finishReaderTap}
-        onPointerCancelCapture={cancelReaderTap}
       >
         <button className="pdf-reader-zone pdf-reader-zone-left" onClick={leftAction} disabled={directionRTL ? pageNumber >= pageCount - 1 : pageNumber <= 0} aria-label={directionRTL ? 'Next page' : 'Previous page'}><ArrowLeftIcon /></button>
         <button className="pdf-reader-zone pdf-reader-zone-right" onClick={rightAction} disabled={directionRTL ? pageNumber <= 0 : pageNumber >= pageCount - 1} aria-label={directionRTL ? 'Previous page' : 'Next page'}><ArrowRightIcon /></button>

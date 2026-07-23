@@ -1,34 +1,38 @@
-# samrai v0.2.0-rc.8
+# samrai v0.2.0-rc.9
 
-Release candidate 8 fixes touch navigation in the PDF reader on phones and tablets.
+Release candidate 9 fixes PDF tap navigation on physical iPhones.
 
-## PDF touch navigation
+## Mobile Safari PDF controls
 
-The whole PDF page now responds to short taps, whether the finger lands on the rendered canvas or the selectable text layer:
+The PDF reader now uses native, passive touch listeners for page navigation. This avoids relying on the Pointer Events behavior reproduced by desktop device emulation and works across the rendered canvas and selectable text layer in Mobile Safari.
+
+A short, single-finger tap keeps the same layout:
 
 - left third: previous page;
-- center third: show or hide the reader controls;
+- center third: show or hide the controls;
 - right third: next page.
 
-The reader only treats a clean, single-finger tap as navigation. It leaves movement, scrolling, panning, pinch zoom, double-tap zoom, long presses, and text selection alone. Links, buttons, inputs, annotation marks, area selection, and note controls keep their normal behavior.
+The gesture is discarded when the finger moves, the page scrolls, another finger is added, a double tap begins, a long press is detected, or text selection becomes active. Links, buttons, inputs, annotation marks, highlights, area selection, pinch zoom, panning, and browser zoom remain untouched.
+
+The reader also stops applying its temporary pointer-selection mode to touch input and now clears that mode after pointer or touch cancellation. This prevents an interrupted gesture from leaving the PDF text layer stuck.
 
 ## Docker Compose
 
-The included Compose file now uses the published image directly:
+The included Compose file pulls:
 
 ```text
-ghcr.io/gomaink/samrai:0.2.0-rc.8
+ghcr.io/gomaink/samrai:0.2.0-rc.9
 ```
 
-It maps host port `24600` to port `8080` in the container. Existing installations keep the same data volume behavior, including compatibility with the legacy `pageturner-data` volume name.
+Host port `24600` remains mapped to container port `8080`.
 
-## Upgrade from rc.7
+## Upgrade from rc.8
 
-1. Stop rc.7.
-2. Extract rc.8 to a separate directory.
-3. Copy the complete rc.7 `data` directory into rc.8.
-4. Copy the rc.7 `.env` file into rc.8.
+1. Stop rc.8.
+2. Extract rc.9 to a separate directory.
+3. Copy the complete rc.8 `data` directory into rc.9.
+4. Copy the rc.8 `.env` file into rc.9.
 5. Run `test-windows.bat` or `go test ./...`.
-6. Start rc.8 and test a PDF on a touch device.
+6. Start rc.9 and verify a PDF on a physical iPhone.
 
-No database migration is required. Existing books, progress, users, annotations, OCR data, and settings remain compatible.
+No database migration is required. Books, progress, users, annotations, OCR data, and settings remain compatible.

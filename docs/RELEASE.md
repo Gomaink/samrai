@@ -6,15 +6,15 @@ From the repository root:
 
 ```powershell
 git add .
-git commit -m "release: samrai v0.2.0-rc.8"
+git commit -m "release: samrai v0.2.0-rc.9"
 git push origin main
 ```
 
 Wait for the `CI` workflow to pass before creating the release tag:
 
 ```powershell
-git tag -a v0.2.0-rc.8 -m "samrai v0.2.0-rc.8"
-git push origin v0.2.0-rc.8
+git tag -a v0.2.0-rc.9 -m "samrai v0.2.0-rc.9"
+git push origin v0.2.0-rc.9
 ```
 
 The tag starts the `Release` workflow. It builds and publishes the container image, creates the source archives and checksum manifest, and opens a GitHub prerelease using `RELEASE_NOTES.md`.
@@ -22,13 +22,13 @@ The tag starts the `Release` workflow. It builds and publishes the container ima
 The workflow creates the GitHub release automatically. To publish the same assets manually with GitHub CLI instead, run:
 
 ```powershell
-gh release create v0.2.0-rc.8 `
+gh release create v0.2.0-rc.9 `
   --repo Gomaink/samrai `
-  --title "samrai v0.2.0-rc.8" `
+  --title "samrai v0.2.0-rc.9" `
   --notes-file RELEASE_NOTES.md `
   --prerelease `
-  samrai-v0.2.0-rc.8-source.zip `
-  samrai-v0.2.0-rc.8-source.tar.gz `
+  samrai-v0.2.0-rc.9-source.zip `
+  samrai-v0.2.0-rc.9-source.tar.gz `
   SHA256SUMS.txt
 ```
 
@@ -65,7 +65,7 @@ The Makefile injects version, commit, and UTC build time through Go linker flags
 Release tags use the form:
 
 ```text
-v0.2.0-rc.8
+v0.2.0-rc.9
 v0.2.0
 ```
 

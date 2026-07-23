@@ -2,6 +2,15 @@
 
 This file records user-visible changes. Dates use UTC.
 
+## [0.2.0-rc.9] - 2026-07-22
+
+### Fixed
+
+- Reworked PDF tap navigation around native touch events so physical iPhones no longer depend on the Pointer Events path used by desktop device emulation.
+- Stopped touch input from putting the selectable PDF text layer into its temporary pointer-selection mode.
+- Cleared the temporary selection state after pointer cancellation and touch cancellation, preventing the text layer from remaining stuck after an interrupted gesture.
+- Kept tap navigation passive and canceled it for movement, scrolling, multi-touch, double taps, long presses, text selection, annotations, links, buttons, and form controls.
+
 ## [0.2.0-rc.8] - 2026-07-22
 
 ### Fixed
