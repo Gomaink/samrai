@@ -1,28 +1,36 @@
 # Release process
 
-## First publication on GitHub
+## Publishing the current release candidate
 
-Create an empty repository named `samrai`. Do not add a README, license, or `.gitignore` from the GitHub form because those files already exist in this project.
-
-From the extracted release directory:
+From the repository root:
 
 ```powershell
-git init
 git add .
-git commit -m "release: samrai v0.2.0-rc.7"
-git branch -M main
-git remote add origin https://github.com/<github-user>/samrai.git
-git push -u origin main
+git commit -m "release: samrai v0.2.0-rc.8"
+git push origin main
 ```
 
 Wait for the `CI` workflow to pass before creating the release tag:
 
 ```powershell
-git tag -a v0.2.0-rc.7 -m "samrai v0.2.0-rc.7"
-git push origin v0.2.0-rc.7
+git tag -a v0.2.0-rc.8 -m "samrai v0.2.0-rc.8"
+git push origin v0.2.0-rc.8
 ```
 
 The tag starts the `Release` workflow. It builds and publishes the container image, creates the source archives and checksum manifest, and opens a GitHub prerelease using `RELEASE_NOTES.md`.
+
+The workflow creates the GitHub release automatically. To publish the same assets manually with GitHub CLI instead, run:
+
+```powershell
+gh release create v0.2.0-rc.8 `
+  --repo Gomaink/samrai `
+  --title "samrai v0.2.0-rc.8" `
+  --notes-file RELEASE_NOTES.md `
+  --prerelease `
+  samrai-v0.2.0-rc.8-source.zip `
+  samrai-v0.2.0-rc.8-source.tar.gz `
+  SHA256SUMS.txt
+```
 
 ## Before tagging
 
@@ -57,7 +65,7 @@ The Makefile injects version, commit, and UTC build time through Go linker flags
 Release tags use the form:
 
 ```text
-v0.2.0-rc.7
+v0.2.0-rc.8
 v0.2.0
 ```
 

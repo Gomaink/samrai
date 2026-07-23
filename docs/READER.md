@@ -22,6 +22,8 @@ The page endpoint can return resized WebP images. Cached variants are disposable
 
 The browser uses PDF.js for rendering and text selection. The server stores catalog metadata, OCR policy, searchable text, annotations, and area rectangles. Passwords supplied for protected PDFs remain in the active browser session and are not saved in the database.
 
+On touch screens, a short tap in the left third moves to the previous page, a tap in the center toggles the controls, and a tap in the right third moves to the next page. The gesture is handled above both the canvas and text layer. Movement, long presses, multi-touch gestures, double taps, active text selections, annotation controls, links, buttons, and form fields are left to the browser or their own handlers.
+
 ## Reflowable EPUB reader
 
 Reflowable books are rendered inside an isolated iframe. The reader exposes theme, font, width, alignment, line spacing, margins, and pagination controls. Position is stored as a structured locator rather than a visual page number.

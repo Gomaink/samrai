@@ -37,18 +37,19 @@ make build
 
 ```bash
 cp .env.example .env
-docker compose up --build -d
+docker compose pull
+docker compose up -d
 docker compose ps
 docker compose logs -f samrai
 ```
 
-The container runs as a non-root user with a read-only root filesystem. Persistent state is stored in the mounted `/data` volume.
+Open `http://127.0.0.1:24600/`. The Compose file pulls `ghcr.io/gomaink/samrai:0.2.0-rc.8`, maps host port `24600` to container port `8080`, and stores persistent state in the mounted `/data` volume. The container runs as a non-root user with a read-only root filesystem.
 
 New installations use `samrai-data`. Older `.env` files that do not define `SAMRAI_DOCKER_VOLUME` continue to mount `pageturner-data`.
 
 ## Reverse proxy and HTTPS
 
-Point Caddy, Nginx, Traefik, or another reverse proxy at port 8080. When users connect over HTTPS, set:
+Point Caddy, Nginx, Traefik, or another reverse proxy at host port 24600. When users connect over HTTPS, set:
 
 ```env
 SAMRAI_COOKIE_SECURE=true
@@ -90,10 +91,10 @@ Migrations are applied in a transaction and recorded in `schema_migrations`. Do 
 ## Windows upgrade example
 
 ```powershell
-New-Item -ItemType Directory -Force "C:\samrai\new\data"
-Copy-Item "C:\samrai\old\data\*" "C:\samrai\new\data" -Recurse -Force
-Copy-Item "C:\samrai\old\.env" "C:\samrai\new\.env" -Force
-Set-Location "C:\samrai\new"
+New-Item -ItemType Directory -Force "C:\samrai\samrai-v0.2.0-rc.8\data"
+Copy-Item "C:\samrai\samrai-v0.2.0-rc.7\data\*" "C:\samrai\samrai-v0.2.0-rc.8\data" -Recurse -Force
+Copy-Item "C:\samrai\samrai-v0.2.0-rc.7\.env" "C:\samrai\samrai-v0.2.0-rc.8\.env" -Force
+Set-Location "C:\samrai\samrai-v0.2.0-rc.8"
 .\test-windows.bat
 .\run-windows.bat
 ```

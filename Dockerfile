@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 
-ARG VERSION=0.2.0-rc.7
+ARG VERSION=0.2.0-rc.8
 ARG COMMIT=source
 ARG BUILD_DATE=unknown
 

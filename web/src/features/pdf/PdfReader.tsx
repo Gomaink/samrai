@@ -43,6 +43,19 @@ type SelectionDraft = {
 
 type AreaDrag = { startX: number; startY: number; currentX: number; currentY: number }
 
+type ReaderTapGesture = {
+  pointerId: number
+  startX: number
+  startY: number
+  startedAt: number
+  suppress: boolean
+}
+
+const readerTapMoveTolerance = 12
+const readerTapMaximumDuration = 450
+const readerDoubleTapDelay = 280
+const readerDoubleTapDistance = 28
+
 const colors: AnnotationColor[] = ['yellow', 'green', 'blue', 'pink', 'orange']
 const colorLabels: Record<AnnotationColor, string> = {
   yellow: 'Yellow', green: 'Green', blue: 'Blue', pink: 'Pink', orange: 'Orange',
@@ -64,6 +77,10 @@ export function PdfReader({ book, onClose }: { book: Book; onClose: () => void }
   const passwordUpdateRef = useRef<((password: string) => void) | null>(null)
   const saveTimerRef = useRef<number | null>(null)
   const selectionFrameRef = useRef<number | null>(null)
+  const tapGestureRef = useRef<ReaderTapGesture | null>(null)
+  const activeTouchPointersRef = useRef(new Set<number>())
+  const pendingTapTimerRef = useRef<number | null>(null)
+  const recentTapRef = useRef<{ x: number; y: number; at: number } | null>(null)
   const lastSavedPageRef = useRef(book.started ? book.current_page : -1)
   const pageTextRef = useRef('')
 
@@ -340,6 +357,10 @@ export function PdfReader({ book, onClose }: { book: Book; onClose: () => void }
 
   useEffect(() => () => { void api.endReadingSession(book.id, sessionIDRef.current) }, [])
 
+  useEffect(() => () => {
+    if (pendingTapTimerRef.current !== null) window.clearTimeout(pendingTapTimerRef.current)
+  }, [])
+
   const saveProgress = useCallback(async (nextPage: number) => {
     if (nextPage === lastSavedPageRef.current && sessionRecordedRef.current) return
     setSaveState('saving')
@@ -512,6 +533,94 @@ export function PdfReader({ book, onClose }: { book: Book; onClose: () => void }
     setControlsVisible(true)
   }
 
+  function cancelPendingReaderTap() {
+    if (pendingTapTimerRef.current === null) return
+    window.clearTimeout(pendingTapTimerRef.current)
+    pendingTapTimerRef.current = null
+  }
+
+  function startReaderTap(event: ReactPointerEvent<HTMLElement>) {
+    if (event.pointerType !== 'touch') return
+
+    activeTouchPointersRef.current.add(event.pointerId)
+    if (activeTouchPointersRef.current.size > 1) {
+      tapGestureRef.current = null
+      cancelPendingReaderTap()
+      return
+    }
+
+    const now = performance.now()
+    const recentTap = recentTapRef.current
+    const isSecondTap = recentTap !== null
+      && now - recentTap.at <= readerDoubleTapDelay + 80
+      && Math.hypot(event.clientX - recentTap.x, event.clientY - recentTap.y) <= readerDoubleTapDistance
+
+    if (isSecondTap) cancelPendingReaderTap()
+    if (readerTapIsUnavailable() || isReaderTapBlockedTarget(event.target)) {
+      tapGestureRef.current = null
+      return
+    }
+
+    tapGestureRef.current = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      startedAt: now,
+      suppress: isSecondTap,
+    }
+  }
+
+  function moveReaderTap(event: ReactPointerEvent<HTMLElement>) {
+    if (event.pointerType !== 'touch') return
+    const gesture = tapGestureRef.current
+    if (!gesture || gesture.pointerId !== event.pointerId) return
+    if (Math.hypot(event.clientX - gesture.startX, event.clientY - gesture.startY) > readerTapMoveTolerance) {
+      tapGestureRef.current = null
+    }
+  }
+
+  function finishReaderTap(event: ReactPointerEvent<HTMLElement>) {
+    if (event.pointerType !== 'touch') return
+    activeTouchPointersRef.current.delete(event.pointerId)
+
+    const gesture = tapGestureRef.current
+    if (!gesture || gesture.pointerId !== event.pointerId) return
+    tapGestureRef.current = null
+
+    const now = performance.now()
+    recentTapRef.current = { x: event.clientX, y: event.clientY, at: now }
+    if (gesture.suppress
+      || now - gesture.startedAt > readerTapMaximumDuration
+      || event.defaultPrevented
+      || isReaderTapBlockedTarget(event.target)
+      || readerTapIsUnavailable()) return
+
+    const clientX = event.clientX
+    cancelPendingReaderTap()
+    pendingTapTimerRef.current = window.setTimeout(() => {
+      pendingTapTimerRef.current = null
+      if (activeTouchPointersRef.current.size > 0 || readerTapIsUnavailable() || hasPDFTextSelection(textLayerRef.current)) return
+
+      const stage = stageRef.current
+      if (!stage) return
+      const bounds = stage.getBoundingClientRect()
+      const position = clamp((clientX - bounds.left) / Math.max(1, bounds.width), 0, 1)
+      if (position < 1 / 3) previous()
+      else if (position > 2 / 3) next()
+      else setControlsVisible((value) => !value)
+    }, readerDoubleTapDelay)
+  }
+
+  function cancelReaderTap(event: ReactPointerEvent<HTMLElement>) {
+    if (event.pointerType !== 'touch') return
+    activeTouchPointersRef.current.delete(event.pointerId)
+    if (tapGestureRef.current?.pointerId === event.pointerId) tapGestureRef.current = null
+  }
+
+  function readerTapIsUnavailable() {
+    return areaMode || rendering || Boolean(loadError || passwordPrompt || selectionDraft || selectedAnnotation || searchOpen || annotationsOpen)
+  }
+
   function openAnnotation(annotation: Annotation) {
     setSelectedAnnotation(annotation)
     setAnnotationNote(annotation.note)
@@ -536,9 +645,17 @@ export function PdfReader({ book, onClose }: { book: Book; onClose: () => void }
         <button className="reader-icon-button" onClick={() => void toggleFullscreen(rootRef.current)} aria-label={fullscreen ? 'Exit full screen' : 'Full screen'}>{fullscreen ? <FullscreenExitIcon /> : <FullscreenIcon />}</button>
       </header>
 
-      <main className="pdf-reader-stage" ref={stageRef} onClick={(event) => {
-        if (event.target === event.currentTarget) setControlsVisible((value) => !value)
-      }}>
+      <main
+        className="pdf-reader-stage"
+        ref={stageRef}
+        onClick={(event) => {
+          if (event.target === event.currentTarget) setControlsVisible((value) => !value)
+        }}
+        onPointerDownCapture={startReaderTap}
+        onPointerMoveCapture={moveReaderTap}
+        onPointerUpCapture={finishReaderTap}
+        onPointerCancelCapture={cancelReaderTap}
+      >
         <button className="pdf-reader-zone pdf-reader-zone-left" onClick={leftAction} disabled={directionRTL ? pageNumber >= pageCount - 1 : pageNumber <= 0} aria-label={directionRTL ? 'Next page' : 'Previous page'}><ArrowLeftIcon /></button>
         <button className="pdf-reader-zone pdf-reader-zone-right" onClick={rightAction} disabled={directionRTL ? pageNumber <= 0 : pageNumber >= pageCount - 1} aria-label={directionRTL ? 'Previous page' : 'Next page'}><ArrowRightIcon /></button>
 
@@ -1056,6 +1173,38 @@ function median(values: number[]) {
 function pointerWithinSurface(event: ReactPointerEvent, surface: HTMLDivElement) {
   const rect = surface.getBoundingClientRect()
   return { x: clamp((event.clientX - rect.left) / rect.width, 0, 1), y: clamp((event.clientY - rect.top) / rect.height, 0, 1) }
+}
+
+function isReaderTapBlockedTarget(target: EventTarget | null) {
+  if (!(target instanceof Element)) return false
+  return Boolean(target.closest([
+    'a[href]',
+    'button',
+    'input',
+    'select',
+    'textarea',
+    'label',
+    'summary',
+    '[contenteditable]:not([contenteditable="false"])',
+    '[role="button"]',
+    '[role="link"]',
+    '[role="checkbox"]',
+    '[role="menuitem"]',
+    '[role="option"]',
+    '[role="radio"]',
+    '[role="slider"]',
+    '[role="switch"]',
+    '[role="tab"]',
+    '[role="textbox"]',
+    '[data-reader-tap-ignore]',
+  ].join(',')))
+}
+
+function hasPDFTextSelection(textLayer: HTMLDivElement | null) {
+  const selection = window.getSelection()
+  if (!selection || selection.isCollapsed || !selection.rangeCount) return false
+  if (!textLayer) return true
+  return selectionIntersectsLayer(selection.getRangeAt(0), textLayer)
 }
 
 function areaDragToRect(drag: AreaDrag): AnnotationRect {

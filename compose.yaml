@@ -1,12 +1,6 @@
 services:
   samrai:
-    image: samrai:0.2.0-rc.7
-    build:
-      context: .
-      args:
-        VERSION: 0.2.0-rc.7
-        COMMIT: source
-        BUILD_DATE: local
+    image: ghcr.io/gomaink/samrai:0.2.0-rc.8
     container_name: samrai
     restart: unless-stopped
     init: true
@@ -19,7 +13,7 @@ services:
       - /tmp:size=128m,mode=1777
     stop_grace_period: 20s
     ports:
-      - "8080:8080"
+      - "24600:8080"
     environment:
       SAMRAI_LOG_LEVEL: info
       SAMRAI_MAX_DB_CONNECTIONS: 4

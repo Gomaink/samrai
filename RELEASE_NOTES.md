@@ -1,28 +1,34 @@
-# samrai v0.2.0-rc.7
+# samrai v0.2.0-rc.8
 
-Release candidate 7 adds manual and bulk reading-status controls.
+Release candidate 8 fixes touch navigation in the PDF reader on phones and tablets.
 
-## Reading status
+## PDF touch navigation
 
-A book can now be marked as read or unread from its detail page. Changing the status does not move the reader or discard the saved page, EPUB section, or location.
+The whole PDF page now responds to short taps, whether the finger lands on the rendered canvas or the selectable text layer:
 
-The books view also supports selecting multiple titles and applying either status in one operation. Series pages include the same selection controls, plus a shortcut for marking the entire series as read or unread.
+- left third: previous page;
+- center third: show or hide the reader controls;
+- right third: next page.
 
-A book that has never been opened can still be marked as read. Marking it as unread later keeps the progress record at its initial position; use **Reset progress** when the book should return to **Not started**.
+The reader only treats a clean, single-finger tap as navigation. It leaves movement, scrolling, panning, pinch zoom, double-tap zoom, long presses, and text selection alone. Links, buttons, inputs, annotation marks, area selection, and note controls keep their normal behavior.
 
-## Other fixes
+## Docker Compose
 
-- Manually completed books display 100% progress throughout the interface.
-- The remaining Portuguese sort and filter labels were replaced with English text.
-- Reading-status updates are atomic: a batch containing a missing book is rejected without changing the other books.
+The included Compose file now uses the published image directly:
 
-## Upgrade from rc.6
+```text
+ghcr.io/gomaink/samrai:0.2.0-rc.8
+```
 
-1. Stop rc.6.
-2. Extract rc.7 to a new directory.
-3. Copy the complete rc.6 `data` directory.
-4. Copy the rc.6 `.env` file.
-5. Run `test-windows.bat`.
-6. Start rc.7.
+It maps host port `24600` to port `8080` in the container. Existing installations keep the same data volume behavior, including compatibility with the legacy `pageturner-data` volume name.
 
-No database migration is required. Existing progress, annotations, history, and library files remain compatible.
+## Upgrade from rc.7
+
+1. Stop rc.7.
+2. Extract rc.8 to a separate directory.
+3. Copy the complete rc.7 `data` directory into rc.8.
+4. Copy the rc.7 `.env` file into rc.8.
+5. Run `test-windows.bat` or `go test ./...`.
+6. Start rc.8 and test a PDF on a touch device.
+
+No database migration is required. Existing books, progress, users, annotations, OCR data, and settings remain compatible.

@@ -2,6 +2,18 @@
 
 This file records user-visible changes. Dates use UTC.
 
+## [0.2.0-rc.8] - 2026-07-22
+
+### Fixed
+
+- Restored touch navigation across the full PDF page on mobile, including the rendered canvas and selectable text layer.
+- A short tap in the left, center, or right third now goes back, toggles the controls, or advances the page.
+- PDF tap navigation now stays out of the way during scrolling, panning, pinch and double-tap zoom, long presses, text selection, area marking, annotation editing, highlights, links, buttons, and form controls.
+
+### Changed
+
+- The supplied Compose file now pulls `ghcr.io/gomaink/samrai:0.2.0-rc.8` and exposes the server on host port `24600`.
+
 ## [0.2.0-rc.7] - 2026-07-15
 
 ### Added
