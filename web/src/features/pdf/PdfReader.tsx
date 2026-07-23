@@ -549,8 +549,9 @@ export function PdfReader({ book, onClose }: { book: Book; onClose: () => void }
   }
 
   useEffect(() => {
-    const stage = stageRef.current
-    if (!stage) return
+    const stageElement = stageRef.current
+    if (!stageElement) return
+    const stage: HTMLDivElement = stageElement
 
     function clearGesture() {
       tapGestureRef.current = null
