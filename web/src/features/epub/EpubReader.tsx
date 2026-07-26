@@ -295,7 +295,46 @@ export function EpubReader({ book, onClose }: { book: Book; onClose: () => void 
       }
 
       frameCleanupRef.current?.()
+      let suppressClickUntil = 0
+      let pendingTapTimer: number | null = null
+      let touchGesture: {
+        identifier: number
+        startX: number
+        startY: number
+        startedAt: number
+        target: EventTarget | null
+        moved: boolean
+        selectionAtStart: boolean
+      } | null = null
+
+      const clearPendingTap = () => {
+        if (pendingTapTimer !== null) {
+          window.clearTimeout(pendingTapTimer)
+          pendingTapTimer = null
+        }
+      }
+      const selectionHandler = () => {
+        window.setTimeout(() => {
+          const draft = createEPUBSelectionDraft(frame, doc, win)
+          if (!draft) return
+          clearPendingTap()
+          setSelectionDraft(draft)
+          setSelectionNote('')
+          setSelectionNoteOpen(false)
+          setControlsVisible(true)
+        }, 0)
+      }
+      const runTapAction = (clientX: number) => {
+        const selection = win.getSelection()
+        if (selection && !selection.isCollapsed) return
+        setSelectionDraft(null)
+        const ratio = clientX / Math.max(1, frame.clientWidth)
+        if (ratio < 0.28) leftAction()
+        else if (ratio > 0.72) rightAction()
+        else setControlsVisible((value) => !value)
+      }
       const clickHandler = (event: MouseEvent) => {
+        if (window.performance.now() < suppressClickUntil) return
         const selection = win.getSelection()
         if (selection && !selection.isCollapsed) return
         const target = event.target as Element | null
@@ -305,31 +344,87 @@ export function EpubReader({ book, onClose }: { book: Book; onClose: () => void 
           handleEPUBLink(anchor.href, publication, spineIndex, navigateToSpine)
           return
         }
-        setSelectionDraft(null)
-        const ratio = event.clientX / Math.max(1, frame.clientWidth)
-        if (ratio < 0.28) leftAction()
-        else if (ratio > 0.72) rightAction()
-        else setControlsVisible((value) => !value)
+        runTapAction(event.clientX)
       }
-      const selectionHandler = () => {
-        window.setTimeout(() => {
-          const draft = createEPUBSelectionDraft(frame, doc, win)
-          if (!draft) return
-          setSelectionDraft(draft)
-          setSelectionNote('')
-          setSelectionNoteOpen(false)
-          setControlsVisible(true)
-        }, 0)
+      const touchStartHandler = (event: TouchEvent) => {
+        clearPendingTap()
+        if (event.touches.length !== 1 || event.changedTouches.length !== 1) {
+          touchGesture = null
+          return
+        }
+        const touch = event.changedTouches.item(0)
+        if (!touch) return
+        const selection = win.getSelection()
+        touchGesture = {
+          identifier: touch.identifier,
+          startX: touch.clientX,
+          startY: touch.clientY,
+          startedAt: window.performance.now(),
+          target: event.target,
+          moved: false,
+          selectionAtStart: Boolean(selection && !selection.isCollapsed),
+        }
       }
+      const touchMoveHandler = (event: TouchEvent) => {
+        const gesture = touchGesture
+        if (!gesture) return
+        if (event.touches.length !== 1) {
+          touchGesture = null
+          return
+        }
+        const touch = Array.from(event.touches).find((item) => item.identifier === gesture.identifier)
+        if (!touch) {
+          touchGesture = null
+          return
+        }
+        if (Math.hypot(touch.clientX - gesture.startX, touch.clientY - gesture.startY) > 12) {
+          gesture.moved = true
+        }
+      }
+      const touchEndHandler = (event: TouchEvent) => {
+        const gesture = touchGesture
+        touchGesture = null
+        selectionHandler()
+        if (!gesture || event.touches.length !== 0) return
+        const touch = Array.from(event.changedTouches).find((item) => item.identifier === gesture.identifier)
+        if (!touch) return
+        const target = gesture.target as Element | null
+        if (target?.closest?.('a[href], audio, video, [contenteditable="true"], [role="button"], [role="link"]')) return
+        const duration = window.performance.now() - gesture.startedAt
+        const distance = Math.hypot(touch.clientX - gesture.startX, touch.clientY - gesture.startY)
+        if (gesture.moved || gesture.selectionAtStart || distance > 12 || duration > 400) return
+        const selection = win.getSelection()
+        if (selection && !selection.isCollapsed) return
+
+        suppressClickUntil = window.performance.now() + 900
+        const clientX = touch.clientX
+        pendingTapTimer = window.setTimeout(() => {
+          pendingTapTimer = null
+          runTapAction(clientX)
+        }, 260)
+      }
+      const touchCancelHandler = () => {
+        touchGesture = null
+        clearPendingTap()
+      }
+
       doc.addEventListener('click', clickHandler)
       doc.addEventListener('mouseup', selectionHandler)
-      doc.addEventListener('touchend', selectionHandler)
       doc.addEventListener('keyup', selectionHandler)
+      doc.addEventListener('touchstart', touchStartHandler, { capture: true, passive: true })
+      doc.addEventListener('touchmove', touchMoveHandler, { capture: true, passive: true })
+      doc.addEventListener('touchend', touchEndHandler, { capture: true, passive: true })
+      doc.addEventListener('touchcancel', touchCancelHandler, { capture: true, passive: true })
       frameCleanupRef.current = () => {
+        clearPendingTap()
+        touchGesture = null
         doc.removeEventListener('click', clickHandler)
         doc.removeEventListener('mouseup', selectionHandler)
-        doc.removeEventListener('touchend', selectionHandler)
         doc.removeEventListener('keyup', selectionHandler)
+        doc.removeEventListener('touchstart', touchStartHandler, true)
+        doc.removeEventListener('touchmove', touchMoveHandler, true)
+        doc.removeEventListener('touchend', touchEndHandler, true)
+        doc.removeEventListener('touchcancel', touchCancelHandler, true)
         clearEPUBHighlights(doc)
       }
       setFrameReady(true)

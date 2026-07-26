@@ -1,5 +1,5 @@
 APP := samrai
-VERSION ?= 0.2.0-rc.9
+VERSION ?= 0.2.0-rc.10
 COMMIT ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo none)
 BUILD_DATE ?= $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
 LDFLAGS := -s -w \

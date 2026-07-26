@@ -20,6 +20,8 @@ Progress is stored as an EPUB locator so it can survive changes in viewport size
 
 The table of contents is built from EPUB 3 navigation documents or EPUB 2 NCX data. Search runs across indexed spine text and returns locations that the reader can open.
 
+On touch devices, a short tap in the left or right third changes the page and a tap in the center shows or hides the reader controls. The sides follow the EPUB reading direction. Navigation is canceled for movement, scrolling, multi-touch, double taps, long presses, text selection, links, and embedded media.
+
 ## Highlights and notes
 
 Text selections create user-private highlights or notes. An EPUB annotation stores selected text and a structured locator into the spine resource. The reader tries to restore the selection when the chapter is opened again.

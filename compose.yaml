@@ -1,6 +1,6 @@
 services:
   samrai:
-    image: ghcr.io/gomaink/samrai:0.2.0-rc.9
+    image: ghcr.io/gomaink/samrai:0.2.0-rc.10
     container_name: samrai
     restart: unless-stopped
     init: true

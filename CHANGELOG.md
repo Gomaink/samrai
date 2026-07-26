@@ -2,6 +2,15 @@
 
 This file records user-visible changes. Dates use UTC.
 
+## [0.2.0-rc.10] - 2026-07-24
+
+### Fixed
+
+- Added native touch handling inside the sandboxed EPUB iframe so tap navigation works on physical iPhones instead of depending on a synthetic click.
+- Restored the EPUB tap zones on mobile: left goes back, center toggles the controls, and right advances, with reading direction respected.
+- Prevented EPUB tap navigation from firing during scrolling, swiping, multi-touch, double taps, long presses, text selection, media interaction, or link activation.
+- Suppressed the delayed compatibility click after a handled touch so one tap cannot trigger two reader actions.
+
 ## [0.2.0-rc.9] - 2026-07-22
 
 ### Fixed
