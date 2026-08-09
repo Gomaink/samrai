@@ -38,7 +38,7 @@ func TestEPUBLocationAtEnd(t *testing.T) {
 
 func TestEPUBContentURLUsesCurrentReaderRevision(t *testing.T) {
 	got := epubContentURL(7, "OEBPS/chapter.xhtml")
-	if !strings.Contains(got, "reader=3") {
+	if !strings.Contains(got, "reader=4") {
 		t.Fatalf("epubContentURL = %q, want current reader revision", got)
 	}
 }
