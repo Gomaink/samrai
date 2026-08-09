@@ -408,23 +408,27 @@ export function EpubReader({ book, onClose }: { book: Book; onClose: () => void 
         clearPendingTap()
       }
 
+      const touchSurface = doc.documentElement
+      const frameTouchPrimer = () => undefined
+      frame.addEventListener('touchstart', frameTouchPrimer, { passive: true })
       doc.addEventListener('click', clickHandler)
       doc.addEventListener('mouseup', selectionHandler)
       doc.addEventListener('keyup', selectionHandler)
-      doc.addEventListener('touchstart', touchStartHandler, { capture: true, passive: true })
-      doc.addEventListener('touchmove', touchMoveHandler, { capture: true, passive: true })
-      doc.addEventListener('touchend', touchEndHandler, { capture: true, passive: true })
-      doc.addEventListener('touchcancel', touchCancelHandler, { capture: true, passive: true })
+      touchSurface.addEventListener('touchstart', touchStartHandler, { capture: true, passive: true })
+      touchSurface.addEventListener('touchmove', touchMoveHandler, { capture: true, passive: true })
+      touchSurface.addEventListener('touchend', touchEndHandler, { capture: true, passive: true })
+      touchSurface.addEventListener('touchcancel', touchCancelHandler, { capture: true, passive: true })
       frameCleanupRef.current = () => {
         clearPendingTap()
         touchGesture = null
+        frame.removeEventListener('touchstart', frameTouchPrimer)
         doc.removeEventListener('click', clickHandler)
         doc.removeEventListener('mouseup', selectionHandler)
         doc.removeEventListener('keyup', selectionHandler)
-        doc.removeEventListener('touchstart', touchStartHandler, true)
-        doc.removeEventListener('touchmove', touchMoveHandler, true)
-        doc.removeEventListener('touchend', touchEndHandler, true)
-        doc.removeEventListener('touchcancel', touchCancelHandler, true)
+        touchSurface.removeEventListener('touchstart', touchStartHandler, true)
+        touchSurface.removeEventListener('touchmove', touchMoveHandler, true)
+        touchSurface.removeEventListener('touchend', touchEndHandler, true)
+        touchSurface.removeEventListener('touchcancel', touchCancelHandler, true)
         clearEPUBHighlights(doc)
       }
       setFrameReady(true)
@@ -652,12 +656,14 @@ export function EpubReader({ book, onClose }: { book: Book; onClose: () => void 
   return (
     <div className={`epub-reader epub-theme-${theme}`} ref={readerRef}>
       <div className="epub-stage">
+        {/* WebKit requires script permission for parent-installed handlers inside a sandboxed same-origin frame.
+            EPUB scripts are still blocked by the response CSP and stripped from the loaded document. */}
         <iframe
           key={`${book.id}-${spineIndex}-${currentItem.content_url}-${frameReloadNonce}`}
           className={`epub-frame${frameReady ? ' epub-frame-ready' : ''}`}
           ref={iframeRef}
           src={currentItem.content_url}
-          sandbox="allow-same-origin"
+          sandbox="allow-same-origin allow-scripts"
           title={`${book.title} — ${chapterTitle}`}
           onLoad={configureFrame}
           onError={() => setFrameError('Could not load this chapter.')}

@@ -43,7 +43,7 @@ docker compose ps
 docker compose logs -f samrai
 ```
 
-Open `http://127.0.0.1:24600/`. The Compose file pulls `ghcr.io/gomaink/samrai:0.2.0-rc.10`, maps host port `24600` to container port `8080`, and stores persistent state in the mounted `/data` volume. The container runs as a non-root user with a read-only root filesystem.
+Open `http://127.0.0.1:24600/`. The Compose file pulls `ghcr.io/gomaink/samrai:0.2.0-rc.11`, maps host port `24600` to container port `8080`, and stores persistent state in the mounted `/data` volume. The container runs as a non-root user with a read-only root filesystem.
 
 New installations use `samrai-data`. Older `.env` files that do not define `SAMRAI_DOCKER_VOLUME` continue to mount `pageturner-data`.
 
@@ -91,10 +91,10 @@ Migrations are applied in a transaction and recorded in `schema_migrations`. Do 
 ## Windows upgrade example
 
 ```powershell
-New-Item -ItemType Directory -Force "C:\samrai\samrai-v0.2.0-rc.10\data"
-Copy-Item "C:\samrai\samrai-v0.2.0-rc.9\data\*" "C:\samrai\samrai-v0.2.0-rc.10\data" -Recurse -Force
-Copy-Item "C:\samrai\samrai-v0.2.0-rc.9\.env" "C:\samrai\samrai-v0.2.0-rc.10\.env" -Force
-Set-Location "C:\samrai\samrai-v0.2.0-rc.10"
+New-Item -ItemType Directory -Force "C:\samrai\samrai-v0.2.0-rc.11\data"
+Copy-Item "C:\samrai\samrai-v0.2.0-rc.10\data\*" "C:\samrai\samrai-v0.2.0-rc.11\data" -Recurse -Force
+Copy-Item "C:\samrai\samrai-v0.2.0-rc.10\.env" "C:\samrai\samrai-v0.2.0-rc.11\.env" -Force
+Set-Location "C:\samrai\samrai-v0.2.0-rc.11"
 .\test-windows.bat
 .\run-windows.bat
 ```

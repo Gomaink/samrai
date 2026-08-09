@@ -121,8 +121,12 @@ func TestEPUBDocumentHeadersAllowSameOriginFraming(t *testing.T) {
 	if got := response.Header().Get("X-Frame-Options"); got != "SAMEORIGIN" {
 		t.Fatalf("X-Frame-Options = %q, want SAMEORIGIN", got)
 	}
-	if got := response.Header().Get("Content-Security-Policy"); !strings.Contains(got, "frame-ancestors 'self'") {
-		t.Fatalf("Content-Security-Policy does not allow same-origin framing: %q", got)
+	csp := response.Header().Get("Content-Security-Policy")
+	if !strings.Contains(csp, "frame-ancestors 'self'") {
+		t.Fatalf("Content-Security-Policy does not allow same-origin framing: %q", csp)
+	}
+	if !strings.Contains(csp, "script-src 'none'") {
+		t.Fatalf("Content-Security-Policy does not block EPUB scripts: %q", csp)
 	}
 	if got := response.Header().Get("Cache-Control"); got != "private, no-cache" {
 		t.Fatalf("Cache-Control = %q, want private, no-cache", got)

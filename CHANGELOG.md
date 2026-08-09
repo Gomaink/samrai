@@ -2,6 +2,15 @@
 
 This file records user-visible changes. Dates use UTC.
 
+## [0.2.0-rc.11] - 2026-08-09
+
+### Fixed
+
+- Allowed parent-installed EPUB input handlers to run inside the sandbox on Mobile Safari while keeping publication JavaScript blocked by Content Security Policy.
+- Moved EPUB touch listeners from the document node to the document element and registered a passive listener on the outer iframe to avoid WebKit iframe touch-routing edge cases.
+- Bumped the EPUB reader resource revision so chapter documents are revalidated after the Mobile Safari fix.
+- Added regression coverage that requires EPUB document responses to retain `script-src 'none'`.
+
 ## [0.2.0-rc.10] - 2026-07-24
 
 ### Fixed

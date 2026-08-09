@@ -26,4 +26,8 @@ On touch screens, a short tap in the left third moves to the previous page, a ta
 
 ## Reflowable EPUB reader
 
-Reflowable books are rendered inside an isolated iframe. The reader exposes theme, font, width, alignment, line spacing, margins, and pagination controls. Position is stored as a structured locator rather than a visual page number.
+Reflowable books are rendered inside a same-origin sandboxed iframe. The reader exposes theme, font, width, alignment, line spacing, margins, and pagination controls. Position is stored as a structured locator rather than a visual page number.
+
+On touch screens, the reader installs its tap handlers on the EPUB document rather than relying on a generated mouse click. Mobile Safari requires script permission on the sandbox before handlers installed by the parent page can run inside the frame, so the iframe carries `allow-scripts`. Publication scripts are still disabled by the EPUB response Content Security Policy (`script-src 'none'`) and removed from the loaded document. The parent frame also registers a passive touch listener and the inner handlers attach to the document element to avoid WebKit iframe touch-routing edge cases.
+
+A short tap uses the left, center, and right reader zones. Movement, scrolling, multi-touch, double taps, long presses, text selection, links, media, and interactive elements do not trigger page navigation.

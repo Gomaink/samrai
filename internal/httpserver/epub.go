@@ -118,9 +118,11 @@ func (s *Server) searchEPUB(w http.ResponseWriter, r *http.Request) {
 
 func setEPUBDocumentHeaders(w http.ResponseWriter) {
 	// EPUB content documents are intentionally rendered inside the samrai
-	// same-origin sandboxed iframe. The global application headers deny all
-	// framing, so this endpoint must explicitly narrow that policy to the
-	// current origin. Scripts and external resources remain blocked.
+	// same-origin sandboxed iframe. Mobile Safari requires the frame to carry
+	// allow-scripts before handlers installed by the parent document can run,
+	// so this response keeps publication scripts disabled with CSP instead.
+	// The global application headers deny all framing; this endpoint narrows
+	// that policy to the current origin and blocks scripts and external resources.
 	w.Header().Set("X-Frame-Options", "SAMEORIGIN")
 	w.Header().Set("Content-Security-Policy", "default-src 'none'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; media-src 'self' data:; script-src 'none'; connect-src 'none'; frame-src 'none'; frame-ancestors 'self'; object-src 'none'; form-action 'none'; base-uri 'none'")
 	w.Header().Set("Referrer-Policy", "no-referrer")

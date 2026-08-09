@@ -263,7 +263,7 @@ func (s *Service) SearchEPUB(ctx context.Context, bookID int64, query string, li
 	return results, nil
 }
 
-const epubReaderResourceRevision = "3"
+const epubReaderResourceRevision = "4"
 
 func epubContentURL(bookID int64, resourcePath string) string {
 	segments := strings.Split(resourcePath, "/")
