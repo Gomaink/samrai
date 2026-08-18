@@ -5,7 +5,7 @@ go 1.26.0
 require (
 	github.com/gen2brain/webp v0.6.4
 	golang.org/x/crypto v0.54.0
-	golang.org/x/image v0.44.0
+	golang.org/x/image v0.45.0
 	modernc.org/sqlite v1.53.0
 )
 
