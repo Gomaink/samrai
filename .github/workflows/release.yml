@@ -62,7 +62,7 @@ jobs:
           git archive --format=zip --prefix="samrai-v${version}/" -o "samrai-v${version}-source.zip" HEAD
           git archive --format=tar.gz --prefix="samrai-v${version}/" -o "samrai-v${version}-source.tar.gz" HEAD
           sha256sum "samrai-v${version}-source.zip" "samrai-v${version}-source.tar.gz" > SHA256SUMS.txt
-      - uses: softprops/action-gh-release@v2
+      - uses: softprops/action-gh-release@v3
         with:
           name: samrai v${{ steps.meta.outputs.version }}
           body_path: RELEASE_NOTES.md
